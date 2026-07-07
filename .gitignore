@@ -1,0 +1,11 @@
+node_modules/
+.output/
+.wxt/
+tests/
+!tests/
+!tests/**/*.test.ts
+.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
