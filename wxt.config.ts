@@ -4,7 +4,7 @@ import VueRouter from 'vite-plugin-pages';
 export default defineConfig({
     modules: ['@wxt-dev/module-vue'],
     manifestVersion: 3,
-    manifest: {
+    manifest: ({ mode }) => ({
         name: 'TM Capture',
         description: '用于采集和整理电商页面数据的浏览器插件。',
         version: '0.1.0',
@@ -87,8 +87,14 @@ export default defineConfig({
             'webNavigation',
             'webRequest',
             'webRequestBlocking'
-        ]
-    },
+        ],
+        content_security_policy: {
+            extension_pages:
+                mode === 'development'
+                    ? "script-src 'self' 'wasm-unsafe-eval' http://localhost:3000; object-src 'self';"
+                    : "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+        }
+    }),
     // WXT 的 Vue 模块负责处理 .vue 文件；这里保留页面路由自动生成配置。
     vite: () => ({
         plugins: [
