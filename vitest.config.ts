@@ -8,5 +8,6 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./tests/setup.ts'],
     clearMocks: true,
+    exclude: ['**/node_modules/**', '**/.git/**', '**/.worktrees/**'],
   },
 });
