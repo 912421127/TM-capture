@@ -13,5 +13,11 @@ export default defineConfig({
     action: {
       default_title: '打开生意参谋采集助手',
     },
+    web_accessible_resources: [
+      {
+        resources: ['sycm-main-world.js'],
+        matches: ['https://sycm.taobao.com/*'],
+      },
+    ],
   },
 });

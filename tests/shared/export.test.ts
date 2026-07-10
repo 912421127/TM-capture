@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import * as XLSX from 'xlsx';
-import { buildExportFileName, createExcelBuffer, rowsToCsv } from '../../src/shared/export';
+import { buildExportFileName, createExcelBuffer, downloadBlob, rowsToCsv } from '../../src/shared/export';
 import type { TableColumn } from '../../src/shared/capture';
 
 const columns: TableColumn[] = [
@@ -30,5 +30,21 @@ describe('export helpers', () => {
       ['商品名称', '支付金额'],
       ['测试商品', 88.5],
     ]);
+  });
+
+  it('通过临时链接下载文件并释放对象地址', () => {
+    const createObjectURL = vi.fn(() => 'blob:test');
+    const revokeObjectURL = vi.fn();
+    Object.defineProperties(URL, {
+      createObjectURL: { configurable: true, value: createObjectURL },
+      revokeObjectURL: { configurable: true, value: revokeObjectURL },
+    });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined);
+
+    downloadBlob('内容', 'text/plain', '测试.txt');
+
+    expect(createObjectURL).toHaveBeenCalledOnce();
+    expect(click).toHaveBeenCalledOnce();
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:test');
   });
 });

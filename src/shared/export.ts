@@ -39,3 +39,12 @@ export function createExcelBuffer(sheetName: string, columns: TableColumn[], row
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName.slice(0, 31));
   return XLSX.write(workbook, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
 }
+
+export function downloadBlob(data: BlobPart, type: string, fileName: string): void {
+  const url = URL.createObjectURL(new Blob([data], { type }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  link.click();
+  URL.revokeObjectURL(url);
+}
