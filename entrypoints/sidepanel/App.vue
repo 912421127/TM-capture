@@ -74,6 +74,7 @@ import type {
   LatestCapture,
 } from '../../src/shared/capture';
 import type { DiagnosticRecord } from '../../src/shared/diagnostic';
+import { requestDiagnosticToggle } from '../../src/shared/diagnostic-control';
 import { buildExportFileName, createExcelBlob, downloadBlob, rowsToCsv } from '../../src/shared/export';
 import {
   clearLatestCapture,
@@ -174,10 +175,7 @@ async function exportResult(featureId: FeatureId, extension: 'xlsx' | 'csv'): Pr
 }
 
 async function toggleDiagnostic(enabled: boolean): Promise<void> {
-  const response = (await browser.runtime.sendMessage({ type: 'DIAGNOSTIC_SET_ENABLED', enabled })) as {
-    ok: boolean;
-    error?: string;
-  };
+  const response = await requestDiagnosticToggle(enabled, browser.runtime.sendMessage);
   if (!response.ok) {
     error.value = response.error ?? '无法启动接口诊断。';
     return;

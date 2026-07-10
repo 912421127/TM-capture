@@ -1,4 +1,5 @@
 import { createDiagnosticBuffer } from '../src/shared/diagnostic-buffer';
+import { enableDiagnosticInTab } from '../src/shared/diagnostic-control';
 import type { DiagnosticRecord } from '../src/shared/diagnostic';
 import { featureRegistry } from '../src/features';
 import type { CaptureRequest } from '../src/shared/capture';
@@ -57,8 +58,7 @@ export default defineBackground(() => {
       if (message.enabled) diagnosticBuffer.clear();
       return getSycmTabId().then(async (tabId) => {
         if (tabId == null) return { ok: false, error: '请先打开并登录生意参谋。' };
-        await browser.tabs.sendMessage(tabId, { type: 'DIAGNOSTIC_SET_ENABLED', enabled: Boolean(message.enabled) });
-        return { ok: true };
+        return enableDiagnosticInTab(tabId, Boolean(message.enabled), browser.tabs.sendMessage);
       });
     }
 
