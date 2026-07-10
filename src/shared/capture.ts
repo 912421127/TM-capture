@@ -56,9 +56,9 @@ export interface MarketProductRankRow extends TableRow {
   imageUrl: string;
   sellerId: string;
   isTmall: boolean;
-  visitorCount: number;
-  buyerCount: number;
-  payAmount: number;
+  visitorCount: CellValue;
+  buyerCount: CellValue;
+  payAmount: CellValue;
 }
 
 export interface FeatureRowsMap {

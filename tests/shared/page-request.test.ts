@@ -34,4 +34,21 @@ describe('executeSycmRequest', () => {
       '登录状态已失效，请重新登录生意参谋。',
     );
   });
+
+  it('使用当前页面临时缓存的登录参数发送采集请求', async () => {
+    const fakeFetch = vi.fn(async () =>
+      new Response(JSON.stringify({ code: 0 }), { status: 200, headers: { 'content-type': 'application/json' } }),
+    );
+
+    await executeSycmRequest(
+      { url: 'https://sycm.taobao.com/cc/item/live/view/top.json?page=1' },
+      fakeFetch,
+      { token: 'page-token', bxUa: 'page-bx-ua', bxVersion: '2.5.36' },
+    );
+
+    expect(fakeFetch).toHaveBeenCalledWith(
+      expect.stringContaining('token=page-token'),
+      expect.objectContaining({ headers: { 'bx-ua': 'page-bx-ua', 'bx-v': '2.5.36' } }),
+    );
+  });
 });

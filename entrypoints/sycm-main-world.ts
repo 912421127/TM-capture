@@ -1,4 +1,5 @@
 import { redactDiagnosticRecord, type DiagnosticRecord } from '../src/shared/diagnostic';
+import { rememberPageAuth, type PageAuth } from '../src/shared/page-auth';
 import { executeSycmRequest } from '../src/shared/page-request';
 import type { SycmRequest } from '../src/shared/capture';
 
@@ -27,9 +28,43 @@ export default defineUnlistedScript(() => {
   if (globalWindow[marker]) return;
   globalWindow[marker] = true;
 
+  // 登录 token 与风控头只保留在页面内存，绝不通过扩展消息或存储传出。
+  let pageAuth: PageAuth = {};
+  function rememberRequestAuth(url: string, headers: Headers): void {
+    if (new URL(url, location.href).origin !== location.origin) return;
+    pageAuth = rememberPageAuth(pageAuth, new URL(url, location.href).href, Object.fromEntries(headers.entries()));
+  }
+
+  const authFetch = window.fetch.bind(window);
+  window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const request = input instanceof Request ? input : null;
+    const url = request?.url ?? String(input);
+    rememberRequestAuth(url, new Headers(init?.headers ?? request?.headers));
+    return authFetch(input, init);
+  };
+
+  const xhrAuthStates = new WeakMap<XMLHttpRequest, { url: string; headers: Record<string, string> }>();
+  const authOpen = XMLHttpRequest.prototype.open;
+  XMLHttpRequest.prototype.open = function (method: string, url: string | URL): void {
+    xhrAuthStates.set(this, { url: new URL(String(url), location.href).href, headers: {} });
+    authOpen.apply(this, arguments as unknown as Parameters<XMLHttpRequest['open']>);
+  };
+  const authSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+  XMLHttpRequest.prototype.setRequestHeader = function (name: string, value: string): void {
+    const state = xhrAuthStates.get(this);
+    if (state) state.headers[name] = value;
+    authSetRequestHeader.call(this, name, value);
+  };
+  const authSend = XMLHttpRequest.prototype.send;
+  XMLHttpRequest.prototype.send = function (body?: Document | XMLHttpRequestBodyInit | null): void {
+    const state = xhrAuthStates.get(this);
+    if (state) rememberRequestAuth(state.url, new Headers(state.headers));
+    authSend.call(this, body);
+  };
+
   window.addEventListener(REQUEST_EVENT, (event) => {
     const detail = (event as CustomEvent<PageRequestEvent>).detail;
-    void executeSycmRequest(detail.request)
+    void executeSycmRequest(detail.request, fetch, pageAuth)
       .then((data) => {
         window.dispatchEvent(
           new CustomEvent(RESULT_EVENT, { detail: { channelId: detail.channelId, requestId: detail.requestId, ok: true, data } }),

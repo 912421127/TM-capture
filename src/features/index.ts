@@ -1,4 +1,6 @@
 import { createFeatureRegistry } from './registry';
+import { businessOverviewFeature } from './business-overview';
+import { marketProductRankFeature } from './market-product-rank';
+import { storeProductRankFeature } from './store-product-rank';
 
-// 适配器必须在真实接口样本经过脱敏并加入测试后才能注册。
-export const featureRegistry = createFeatureRegistry([]);
+export const featureRegistry = createFeatureRegistry([businessOverviewFeature, storeProductRankFeature, marketProductRankFeature]);

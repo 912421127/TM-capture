@@ -1,21 +1,24 @@
 import type { SycmRequest } from './capture';
+import type { PageAuth } from './page-auth';
+import { prepareAuthenticatedRequest } from './page-auth';
 
 const SYCM_ORIGIN = 'https://sycm.taobao.com';
 
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 
-export async function executeSycmRequest<T>(request: SycmRequest, fetchImpl: FetchLike = fetch): Promise<T> {
-  const url = new URL(request.url, SYCM_ORIGIN);
+export async function executeSycmRequest<T>(request: SycmRequest, fetchImpl: FetchLike = fetch, auth?: PageAuth): Promise<T> {
+  const authenticatedRequest = auth ? prepareAuthenticatedRequest(request, auth) : request;
+  const url = new URL(authenticatedRequest.url, SYCM_ORIGIN);
   if (url.origin !== SYCM_ORIGIN) throw new Error('插件只允许请求生意参谋接口。');
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), request.timeoutMs ?? 30_000);
+  const timeout = setTimeout(() => controller.abort(), authenticatedRequest.timeoutMs ?? 30_000);
 
   try {
     const response = await fetchImpl(url.href, {
-      method: request.method ?? 'GET',
-      headers: request.headers,
-      body: request.body,
+      method: authenticatedRequest.method ?? 'GET',
+      headers: authenticatedRequest.headers,
+      body: authenticatedRequest.body,
       credentials: 'include',
       signal: controller.signal,
     });

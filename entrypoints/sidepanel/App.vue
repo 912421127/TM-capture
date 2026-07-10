@@ -213,6 +213,10 @@ onMounted(async () => {
     const response = (await browser.runtime.sendMessage({ type: 'DIAGNOSTIC_LIST' })) as { records?: DiagnosticRecord[] };
     diagnosticRecords.value = response.records ?? [];
   }
+  const categoryResponse = (await browser.runtime.sendMessage({ type: 'CATEGORIES_LIST' })) as {
+    categories?: CategoryOption[];
+  };
+  categories.value = categoryResponse.categories ?? [];
   browser.runtime.onMessage.addListener(handleRuntimeMessage);
   await checkConnection();
 });
