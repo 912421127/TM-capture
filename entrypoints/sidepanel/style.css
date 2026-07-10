@@ -1,0 +1,103 @@
+:root {
+  color: #1f2937;
+  background: #f4f6f8;
+  font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 360px;
+  margin: 0;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 16px;
+  background: #fff;
+}
+
+.app-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.app-header h1,
+.diagnostic-header h2 {
+  margin: 0;
+}
+
+.app-header h1 {
+  font-size: 20px;
+}
+
+.app-header p,
+.diagnostic-header p {
+  margin: 5px 0 0;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.connection-actions {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0 4px;
+}
+
+.diagnostic-panel {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.diagnostic-header,
+.diagnostic-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.diagnostic-header {
+  margin-bottom: 12px;
+}
+
+.diagnostic-header h2 {
+  font-size: 16px;
+}
+
+.diagnostic-actions {
+  margin: 12px 0;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.diagnostic-list {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.diagnostic-list details {
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.diagnostic-list summary {
+  cursor: pointer;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.diagnostic-list pre {
+  overflow: auto;
+  padding: 8px;
+  border-radius: 4px;
+  background: #111827;
+  color: #e5e7eb;
+  font-size: 11px;
+  white-space: pre-wrap;
+}

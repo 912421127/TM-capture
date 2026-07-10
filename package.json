@@ -19,6 +19,7 @@
     "xlsx": "0.18.5"
   },
   "devDependencies": {
+    "@vitejs/plugin-vue": "6.0.7",
     "@vue/test-utils": "2.4.11",
     "@wxt-dev/module-vue": "1.0.3",
     "jsdom": "29.1.1",

@@ -73,6 +73,7 @@ export type RowFor<F extends FeatureId> = FeatureRowsMap[F];
 export interface TableColumn {
   key: string;
   label: string;
+  format?: 'text' | 'number' | 'currency' | 'percentage' | 'boolean' | 'link';
 }
 
 export interface LatestCapture<F extends FeatureId = FeatureId> {
