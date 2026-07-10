@@ -1,7 +1,11 @@
 import { createDiagnosticBuffer } from '../src/shared/diagnostic-buffer';
 import type { DiagnosticRecord } from '../src/shared/diagnostic';
-import { initializeStorage } from '../src/shared/storage';
+import { featureRegistry } from '../src/features';
+import type { CaptureRequest } from '../src/shared/capture';
+import { createCaptureHandler } from '../src/shared/capture-handler';
+import { initializeStorage, saveLatestCapture } from '../src/shared/storage';
 import { findSycmTabId } from '../src/shared/tabs';
+import { createTabTransport, type PageRequestResponse } from '../src/shared/transport';
 
 interface ExtensionMessage {
   type?: string;
@@ -20,7 +24,23 @@ export default defineBackground(() => {
     return findSycmTabId(tabs);
   }
 
+  const handleCapture = createCaptureHandler({
+    registry: featureRegistry,
+    getTabId: getSycmTabId,
+    createTransport: (tabId) =>
+      createTabTransport(tabId, async (targetTabId, requestMessage) => {
+        return (await browser.tabs.sendMessage(targetTabId, requestMessage)) as PageRequestResponse;
+      }),
+    save: saveLatestCapture,
+    broadcast: async (progressMessage) => {
+      await browser.runtime.sendMessage(progressMessage).catch(() => undefined);
+    },
+  });
+
   browser.runtime.onMessage.addListener((message: ExtensionMessage) => {
+    if (message.type === 'CAPTURE_START') {
+      return handleCapture(message as CaptureRequest);
+    }
     if (message.type === 'CONNECTION_CHECK') {
       return getSycmTabId().then((tabId) => ({ connected: tabId != null }));
     }

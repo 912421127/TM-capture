@@ -74,7 +74,7 @@ import type {
   LatestCapture,
 } from '../../src/shared/capture';
 import type { DiagnosticRecord } from '../../src/shared/diagnostic';
-import { buildExportFileName, createExcelBuffer, downloadBlob, rowsToCsv } from '../../src/shared/export';
+import { buildExportFileName, createExcelBlob, downloadBlob, rowsToCsv } from '../../src/shared/export';
 import {
   clearLatestCapture,
   initializeStorage,
@@ -153,7 +153,7 @@ async function clearResult(featureId: FeatureId): Promise<void> {
   error.value = '';
 }
 
-function exportResult(featureId: FeatureId, extension: 'xlsx' | 'csv'): void {
+async function exportResult(featureId: FeatureId, extension: 'xlsx' | 'csv'): Promise<void> {
   const capture = capturesByFeature.value[featureId];
   const definition = featureDefinitions.find((item) => item.id === featureId);
   if (!capture || !definition) return;
@@ -169,11 +169,8 @@ function exportResult(featureId: FeatureId, extension: 'xlsx' | 'csv'): void {
     downloadBlob(rowsToCsv(definition.columns, capture.rows), 'text/csv;charset=utf-8', fileName);
     return;
   }
-  downloadBlob(
-    createExcelBuffer(definition.label, definition.columns, capture.rows),
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    fileName,
-  );
+  const excelBlob = await createExcelBlob(definition.label, definition.columns, capture.rows);
+  downloadBlob(excelBlob, excelBlob.type, fileName);
 }
 
 async function toggleDiagnostic(enabled: boolean): Promise<void> {

@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import writeXlsxFile, { type SheetData } from 'write-excel-file/browser';
 import type { TableColumn, TableRow } from './capture';
 
 function escapeCsvCell(value: unknown): string {
@@ -29,15 +29,12 @@ export function buildExportFileName(
   return `${featureLabel}_${startDate}_至_${endDate}_${date}_${time}.${extension}`;
 }
 
-export function createExcelBuffer(sheetName: string, columns: TableColumn[], rows: TableRow[]): ArrayBuffer {
-  const values = [
-    columns.map((column) => column.label),
+export async function createExcelBlob(sheetName: string, columns: TableColumn[], rows: TableRow[]): Promise<Blob> {
+  const sheetData: SheetData = [
+    columns.map((column) => ({ value: column.label, fontWeight: 'bold' })),
     ...rows.map((row) => columns.map((column) => row[column.key] ?? '')),
   ];
-  const workbook = XLSX.utils.book_new();
-  const worksheet = XLSX.utils.aoa_to_sheet(values);
-  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName.slice(0, 31));
-  return XLSX.write(workbook, { bookType: 'xlsx', type: 'array' }) as ArrayBuffer;
+  return writeXlsxFile(sheetData, { sheet: sheetName.slice(0, 31) }).toBlob();
 }
 
 export function downloadBlob(data: BlobPart, type: string, fileName: string): void {
