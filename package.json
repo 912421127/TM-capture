@@ -1,25 +1,29 @@
 {
-    "name": "tm-capture",
-    "version": "0.1.0",
-    "private": true,
-    "type": "module",
-    "scripts": {
-        "dev": "wxt",
-        "build": "wxt build",
-        "compile": "wxt prepare && vue-tsc --noEmit",
-        "test": "node tests/sycmCapture.test.mjs"
-    },
-    "dependencies": {
-        "@wxt-dev/module-vue": "1.0.3",
-        "ant-design-vue": "4.2.6",
-        "vue": "3.5.39",
-        "vue-router": "^4.5.0",
-        "wxt": "0.20.27"
-    },
-    "devDependencies": {
-        "typescript": "^5.9.2",
-        "vue-tsc": "^3.0.6",
-        "vite-plugin-pages": "^0.32.4",
-        "xlsx": "^0.18.5"
-    }
+  "name": "tm-capture",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wxt",
+    "build": "wxt build",
+    "compile": "wxt prepare && vue-tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "zip": "wxt zip",
+    "postinstall": "wxt prepare"
+  },
+  "dependencies": {
+    "ant-design-vue": "4.2.6",
+    "vue": "3.5.39",
+    "xlsx": "0.18.5"
+  },
+  "devDependencies": {
+    "@vue/test-utils": "2.4.11",
+    "@wxt-dev/module-vue": "1.0.3",
+    "jsdom": "29.1.1",
+    "typescript": "5.9.2",
+    "vitest": "4.1.10",
+    "vue-tsc": "3.3.7",
+    "wxt": "0.20.27"
+  }
 }
