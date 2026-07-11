@@ -4,11 +4,12 @@ import {
   createRequestRecord,
   formatCaptureUrl,
   serializeCaptureRecords,
-  buildCoreIndexTable,
   matchesCaptureRule,
   matchesAnyCaptureRule,
   type CaptureRule,
 } from '../../src/shared/request-capture';
+import { captureFeatures, findCaptureFeature } from '../../src/features';
+import { buildCoreIndexTable } from '../../src/features/core-index/table';
 
 describe('request capture helpers', () => {
   it('matches a URL keyword rule', () => {
@@ -26,12 +27,18 @@ describe('request capture helpers', () => {
   });
 
   it('only allows configured interfaces to be captured', () => {
-    expect(matchesAnyCaptureRule('https://sycm.taobao.com/portal/coreIndex/new/getTableData/v3.json?dateType=day')).toBe(true);
-    expect(matchesAnyCaptureRule('https://sycm.taobao.com/portal/coreIndex/new/trend/v3.json')).toBe(false);
+    expect(matchesAnyCaptureRule('https://sycm.taobao.com/portal/coreIndex/new/getTableData/v3.json?dateType=day', captureFeatures)).toBe(true);
+    expect(matchesAnyCaptureRule('https://sycm.taobao.com/portal/coreIndex/new/trend/v3.json', captureFeatures)).toBe(false);
+  });
+
+  it('finds the feature that owns a captured URL', () => {
+    expect(findCaptureFeature('https://sycm.taobao.com/portal/coreIndex/new/getTableData/v3.json?dateType=day')?.id).toBe('core-index');
+    expect(findCaptureFeature('https://sycm.taobao.com/portal/coreIndex/new/trend/v3.json')).toBeUndefined();
   });
 
   it('classifies JSON and binary response bodies', () => {
-    expect(createRequestRecord({
+    const record = createRequestRecord({
+      interfaceId: 'core-index',
       pageId: 'tab-1',
       transport: 'fetch',
       method: 'GET',
@@ -39,9 +46,13 @@ describe('request capture helpers', () => {
       status: 200,
       contentType: 'application/json',
       responseBody: '{"ok":true}',
-    }).responseBody).toBe('{"ok":true}');
+    });
+
+    expect(record.interfaceId).toBe('core-index');
+    expect(record.responseBody).toBe('{"ok":true}');
 
     expect(createRequestRecord({
+      interfaceId: 'core-index',
       pageId: 'tab-1',
       transport: 'xhr',
       method: 'GET',
@@ -54,8 +65,8 @@ describe('request capture helpers', () => {
 
   it('clears records for one page without affecting another page', () => {
     const store = createPageCaptureStore();
-    const first = createRequestRecord({ pageId: 'tab-1', transport: 'fetch', method: 'GET', url: 'https://sycm.taobao.com/a', status: 200, contentType: 'application/json', responseBody: '{}' });
-    const second = createRequestRecord({ pageId: 'tab-2', transport: 'fetch', method: 'GET', url: 'https://sycm.taobao.com/b', status: 200, contentType: 'application/json', responseBody: '{}' });
+    const first = createRequestRecord({ interfaceId: 'core-index', pageId: 'tab-1', transport: 'fetch', method: 'GET', url: 'https://sycm.taobao.com/a', status: 200, contentType: 'application/json', responseBody: '{}' });
+    const second = createRequestRecord({ interfaceId: 'core-index', pageId: 'tab-2', transport: 'fetch', method: 'GET', url: 'https://sycm.taobao.com/b', status: 200, contentType: 'application/json', responseBody: '{}' });
 
     store.add(first);
     store.add(second);
@@ -65,12 +76,25 @@ describe('request capture helpers', () => {
     expect(store.list('tab-2')).toEqual([second]);
   });
 
+  it('lists records for one interface without mixing another interface', () => {
+    const store = createPageCaptureStore();
+    const overview = createRequestRecord({ interfaceId: 'core-index', pageId: 'tab-1', transport: 'fetch', method: 'GET', url: 'https://sycm.taobao.com/overview', status: 200, contentType: 'application/json', responseBody: '{}' });
+    const trend = createRequestRecord({ interfaceId: 'trend', pageId: 'tab-1', transport: 'fetch', method: 'GET', url: 'https://sycm.taobao.com/trend', status: 200, contentType: 'application/json', responseBody: '{}' });
+
+    store.add(overview);
+    store.add(trend);
+
+    expect(store.list('tab-1', 'core-index')).toEqual([overview]);
+    store.clear('tab-1', 'core-index');
+    expect(store.list('tab-1', 'trend')).toEqual([trend]);
+  });
+
   it('does not throw when a captured URL is invalid', () => {
     expect(formatCaptureUrl('not-a-valid-url')).toBe('not-a-valid-url');
   });
 
   it('serializes captured records as readable JSON', () => {
-    const record = createRequestRecord({ pageId: 'tab-1', transport: 'fetch', method: 'GET', url: 'https://sycm.taobao.com/api/data', status: 200, contentType: 'application/json', responseBody: '{"ok":true}' });
+    const record = createRequestRecord({ interfaceId: 'core-index', pageId: 'tab-1', transport: 'fetch', method: 'GET', url: 'https://sycm.taobao.com/api/data', status: 200, contentType: 'application/json', responseBody: '{"ok":true}' });
     const exported = JSON.parse(serializeCaptureRecords([record]));
 
     expect(exported.records).toEqual([record]);

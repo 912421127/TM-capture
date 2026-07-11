@@ -1,8 +1,8 @@
-import { createRequestRecord, matchesAnyCaptureRule, type CaptureTransport } from '../src/shared/request-capture';
+import { findCaptureFeature, getCaptureFeature } from '../src/features';
+import { createRequestRecord, type CaptureTransport } from '../src/shared/request-capture';
 
-// 此脚本运行在网页主世界，用来观察页面自己的 fetch/XHR；内容脚本没有这个权限。
 const CAPTURE_EVENT = '__tm_capture_record';
-const DIRECT_CAPTURE_EVENT = '__tm_capture_direct_record';
+const TRIGGER_EVENT = '__tm_capture_trigger';
 const INSTALLED_MARKER = '__TM_CAPTURE_MAIN_CONTENT_INSTALLED__';
 
 interface XhrState {
@@ -21,12 +21,16 @@ export default defineContentScript({
     if (page[INSTALLED_MARKER]) return;
     page[INSTALLED_MARKER] = true;
 
-    window.addEventListener(DIRECT_CAPTURE_EVENT, () => {
-      void requestCoreIndexTable();
+    window.addEventListener(TRIGGER_EVENT, (event) => {
+      const interfaceId = (event as CustomEvent<{ interfaceId?: string }>).detail?.interfaceId;
+      if (!interfaceId) return;
+      void getCaptureFeature(interfaceId)?.request();
     });
 
-    function isTargetUrl(url: string): boolean {
-      return new URL(url, location.href).origin === location.origin && matchesAnyCaptureRule(url);
+    function getFeatureForUrl(url: string) {
+      const resolvedUrl = new URL(url, location.href);
+      if (resolvedUrl.origin !== location.origin) return undefined;
+      return findCaptureFeature(resolvedUrl.href);
     }
 
     function isTextContent(contentType: string): boolean {
@@ -41,7 +45,7 @@ export default defineContentScript({
       return result;
     }
 
-    function publish(input: {
+    function publish(interfaceId: string, input: {
       transport: CaptureTransport;
       method: string;
       url: string;
@@ -53,7 +57,7 @@ export default defineContentScript({
       responseSize?: number;
     }): void {
       window.dispatchEvent(new CustomEvent(CAPTURE_EVENT, {
-        detail: createRequestRecord({ pageId: location.href, ...input }),
+        detail: createRequestRecord({ interfaceId, pageId: location.href, ...input }),
       }));
     }
 
@@ -62,12 +66,18 @@ export default defineContentScript({
       const response = await originalFetch(input, init);
       const request = input instanceof Request ? input : undefined;
       const url = request?.url ?? String(input);
-      if (!isTargetUrl(url)) return response;
+      const feature = getFeatureForUrl(url);
+      if (!feature) return response;
+
       const contentType = response.headers.get('content-type') ?? '';
       const headers = new Headers(request?.headers ?? init?.headers);
-      void response.clone().arrayBuffer().then((bytes) => publish({
-        transport: 'fetch', method: init?.method ?? request?.method ?? 'GET', url,
-        status: response.status, contentType, requestHeaders: safeHeaders(headers),
+      void response.clone().arrayBuffer().then((bytes) => publish(feature.id, {
+        transport: 'fetch',
+        method: init?.method ?? request?.method ?? 'GET',
+        url,
+        status: response.status,
+        contentType,
+        requestHeaders: safeHeaders(headers),
         requestBody: typeof init?.body === 'string' ? init.body : '',
         responseBody: isTextContent(contentType) ? new TextDecoder().decode(bytes) : '',
         responseSize: bytes.byteLength,
@@ -94,53 +104,24 @@ export default defineContentScript({
       const state = xhrStates.get(this);
       if (state && typeof body === 'string') state.requestBody = body;
       this.addEventListener('load', () => {
-        if (!state || !isTargetUrl(state.url)) return;
+        if (!state) return;
+        const feature = getFeatureForUrl(state.url);
+        if (!feature) return;
         const contentType = this.getResponseHeader('content-type') ?? '';
         const responseBody = isTextContent(contentType) && typeof this.responseText === 'string' ? this.responseText : '';
-        publish({ transport: 'xhr', method: state.method, url: state.url, status: this.status, contentType, requestHeaders: state.requestHeaders, requestBody: state.requestBody, responseBody, responseSize: responseBody.length });
+        publish(feature.id, {
+          transport: 'xhr',
+          method: state.method,
+          url: state.url,
+          status: this.status,
+          contentType,
+          requestHeaders: state.requestHeaders,
+          requestBody: state.requestBody,
+          responseBody,
+          responseSize: responseBody.length,
+        });
       });
       originalSend.call(this, body);
     };
-
-    async function requestCoreIndexTable(): Promise<void> {
-      // 定时任务复用页面已登录会话，只补齐接口需要的 token 和当天日期范围。
-      const token = findQueryValue('token');
-      if (!token) return;
-      const dateRange = findQueryValue('dateRange') ?? formatToday();
-      const url = new URL('/portal/coreIndex/new/getTableData/v3.json', location.origin);
-      url.searchParams.set('dateType', 'day');
-      url.searchParams.set('dateRange', dateRange);
-      url.searchParams.set('_', String(Date.now()));
-      url.searchParams.set('token', token);
-
-      try {
-        const response = await fetch(url.href, { credentials: 'include' });
-        const contentType = response.headers.get('content-type') ?? '';
-        await response.text();
-      } catch {
-        // 当前页面登录状态失效时不打断页面，只让侧边栏继续显示已有数据。
-      }
-    }
-
-    function findQueryValue(key: string): string | null {
-      const currentValue = new URL(location.href).searchParams.get(key);
-      if (currentValue) return currentValue;
-      const entries = performance.getEntriesByType('resource').reverse();
-      for (const entry of entries) {
-        try {
-          const value = new URL((entry as PerformanceResourceTiming).name, location.href).searchParams.get(key);
-          if (value) return value;
-        } catch {
-          continue;
-        }
-      }
-      return null;
-    }
-
-    function formatToday(): string {
-      const now = new Date();
-      const date = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
-      return `${date.toISOString().slice(0, 10)}|${date.toISOString().slice(0, 10)}`;
-    }
   },
 });

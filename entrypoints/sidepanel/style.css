@@ -16,6 +16,11 @@ button { padding: 5px 9px; border: 1px solid #cbd5e1; border-radius: 4px; backgr
 .summary { margin: 14px 0 8px; }
 .auto-capture-bar { display: flex; align-items: center; gap: 12px; margin: 12px 0; padding: 8px 10px; background: #f8fafc; color: #64748b; font-size: 12px; }
 .auto-capture-bar label { color: #1f2937; }
+.interface-panel { margin-top: 14px; }
+.interface-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.interface-header h2 { margin: 0; font-size: 16px; }
+.interface-header p { margin: 4px 0 0; color: #64748b; font-size: 12px; }
+.auto-capture-bar select { padding: 4px; border: 1px solid #cbd5e1; border-radius: 4px; background: white; }
 .empty { padding: 28px 12px; color: #64748b; text-align: center; font-size: 13px; }
 /* 表格横向滚动，首列固定，便于对照大量日期列。 */
 .overview-table-wrap { overflow: auto; margin-top: 12px; border: 1px solid #e2e8f0; }

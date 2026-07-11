@@ -1,116 +1,144 @@
+import { getCaptureFeature } from '../src/features';
 import { createPageCaptureStore, type RequestRecord } from '../src/shared/request-capture';
+import {
+  AUTO_CAPTURE_ALARM_PREFIX,
+  createScheduleConfig,
+  disableSchedule,
+  getAlarmName,
+  isSupportedInterval,
+  type InterfaceSchedule,
+  type ScheduleConfig,
+} from '../src/shared/schedule';
 
-// 后台只管理两件事：按标签页保存接口响应，以及按小时向指定标签页发起刷新。
 const captureStore = createPageCaptureStore();
-const AUTO_CAPTURE_ALARM = 'tm-capture-auto-hourly';
-const AUTO_CAPTURE_STORAGE_KEY = 'autoCaptureConfig';
+const SCHEDULE_STORAGE_KEY = 'interfaceSchedules';
 
-interface AutoCaptureConfig {
-  enabled: boolean;
-  tabId?: number;
+async function readScheduleConfig(): Promise<ScheduleConfig> {
+  const result = await browser.storage.local.get(SCHEDULE_STORAGE_KEY);
+  return (result[SCHEDULE_STORAGE_KEY] as ScheduleConfig | undefined) ?? createScheduleConfig();
 }
 
-async function readAutoCaptureConfig(): Promise<AutoCaptureConfig> {
-  const result = await browser.storage.local.get(AUTO_CAPTURE_STORAGE_KEY);
-  return (result[AUTO_CAPTURE_STORAGE_KEY] as AutoCaptureConfig | undefined) ?? { enabled: false };
+async function saveScheduleConfig(config: ScheduleConfig): Promise<void> {
+  await browser.storage.local.set({ [SCHEDULE_STORAGE_KEY]: config });
 }
 
-async function saveAutoCaptureConfig(config: AutoCaptureConfig): Promise<void> {
-  await browser.storage.local.set({ [AUTO_CAPTURE_STORAGE_KEY]: config });
+async function stopSchedule(interfaceId: string): Promise<void> {
+  await browser.alarms.clear(getAlarmName(interfaceId));
+  const config = await readScheduleConfig();
+  disableSchedule(config, interfaceId);
+  await saveScheduleConfig(config);
 }
 
-async function stopAutoCapture(): Promise<void> {
-  await browser.alarms.clear(AUTO_CAPTURE_ALARM);
-  await saveAutoCaptureConfig({ enabled: false });
-}
+async function triggerInterface(tabId: number, interfaceId: string): Promise<{ ok: boolean; error?: string }> {
+  if (!getCaptureFeature(interfaceId)) return { ok: false, error: '未找到该接口的采集配置' };
 
-async function triggerTabCapture(tabId: number): Promise<{ ok: boolean; error?: string }> {
   try {
     const tab = await browser.tabs.get(tabId);
     if (!tab.url?.startsWith('https://sycm.taobao.com/')) {
-      await stopAutoCapture();
+      await stopSchedule(interfaceId);
       return { ok: false, error: '目标生意参谋页面已关闭或地址已改变' };
     }
-    // 定时任务直接在当前页面上下文调用目标接口，不刷新页面、不改变用户位置。
-    await browser.tabs.sendMessage(tabId, { type: 'LOAD_CORE_INDEX_DIRECT' });
+    // 请求在页面上下文完成，复用用户的登录状态且不改变当前页面位置。
+    await browser.tabs.sendMessage(tabId, { type: 'CAPTURE_TRIGGER', interfaceId });
     return { ok: true };
   } catch {
-    await stopAutoCapture();
+    await stopSchedule(interfaceId);
     return { ok: false, error: '无法连接目标生意参谋页面，请重新打开页面' };
   }
 }
 
-async function startAutoCapture(tabId: number): Promise<{ ok: boolean; error?: string; nextRunAt?: number }> {
-  const result = await triggerTabCapture(tabId);
+async function startSchedule(tabId: number, interfaceId: string, intervalMinutes: number): Promise<{ ok: boolean; error?: string; nextRunAt?: number }> {
+  if (!isSupportedInterval(intervalMinutes)) return { ok: false, error: '请选择 15、30 或 60 分钟' };
+
+  const result = await triggerInterface(tabId, interfaceId);
   if (!result.ok) return result;
-  await browser.alarms.create(AUTO_CAPTURE_ALARM, { delayInMinutes: 60, periodInMinutes: 60 });
-  await saveAutoCaptureConfig({ enabled: true, tabId });
-  return { ok: true, nextRunAt: Date.now() + 60 * 60 * 1000 };
+
+  await browser.alarms.create(getAlarmName(interfaceId), { delayInMinutes: intervalMinutes, periodInMinutes: intervalMinutes });
+  const config = await readScheduleConfig();
+  config[interfaceId] = { enabled: true, tabId, intervalMinutes };
+  await saveScheduleConfig(config);
+  return { ok: true, nextRunAt: Date.now() + intervalMinutes * 60 * 1000 };
 }
 
-async function restoreAutoCapture(): Promise<void> {
-  // 浏览器重启后 alarms 会丢失，使用本地开关恢复用户已启用的任务。
-  const config = await readAutoCaptureConfig();
-  if (!config.enabled || config.tabId === undefined) return;
-  const result = await triggerTabCapture(config.tabId);
-  if (result.ok) await browser.alarms.create(AUTO_CAPTURE_ALARM, { delayInMinutes: 60, periodInMinutes: 60 });
+async function restoreSchedules(): Promise<void> {
+  const config = await readScheduleConfig();
+  await Promise.all(Object.entries(config).map(async ([interfaceId, schedule]) => {
+    if (!schedule.enabled || schedule.tabId === undefined || schedule.intervalMinutes === undefined) return;
+    const result = await triggerInterface(schedule.tabId, interfaceId);
+    if (result.ok) {
+      await browser.alarms.create(getAlarmName(interfaceId), {
+        delayInMinutes: schedule.intervalMinutes,
+        periodInMinutes: schedule.intervalMinutes,
+      });
+    }
+  }));
 }
 
 export default defineBackground(() => {
-  // 点击扩展图标直接打开侧边栏，用户无需先进入浏览器菜单寻找面板。
   void browser.sidePanel.setPanelBehavior({ openPanelOnActionClick: true });
-
-  void restoreAutoCapture();
+  void restoreSchedules();
 
   browser.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name !== AUTO_CAPTURE_ALARM) return;
-    void readAutoCaptureConfig().then((config) => {
-      if (config.enabled && config.tabId !== undefined) void triggerTabCapture(config.tabId);
+    if (!alarm.name.startsWith(AUTO_CAPTURE_ALARM_PREFIX)) return;
+    const interfaceId = alarm.name.slice(AUTO_CAPTURE_ALARM_PREFIX.length);
+    void readScheduleConfig().then((config) => {
+      const schedule = config[interfaceId];
+      if (schedule?.enabled && schedule.tabId !== undefined) void triggerInterface(schedule.tabId, interfaceId);
     });
   });
 
   browser.tabs.onRemoved.addListener((tabId) => {
-    void readAutoCaptureConfig().then((config) => {
-      if (config.tabId === tabId) void stopAutoCapture();
+    void readScheduleConfig().then((config) => {
+      Object.entries(config).forEach(([interfaceId, schedule]) => {
+        if (schedule.tabId === tabId) void stopSchedule(interfaceId);
+      });
     });
   });
 
-  browser.runtime.onMessage.addListener((message: { type?: string; record?: RequestRecord; pageId?: string; enabled?: boolean; tabId?: number }, sender) => {
+  browser.runtime.onMessage.addListener((message: {
+    type?: string;
+    record?: RequestRecord;
+    pageId?: string;
+    interfaceId?: string;
+    enabled?: boolean;
+    tabId?: number;
+    intervalMinutes?: number;
+  }, sender) => {
     if (message.type === 'CAPTURE_RECORD' && message.record) {
       const pageId = String(sender.tab?.id ?? message.record.pageId);
       const record = { ...message.record, pageId };
       captureStore.add(record);
-      // 侧边栏打开时实时刷新，关闭时则由下次打开的列表查询获取历史记录。
-      void browser.runtime.sendMessage({ type: 'CAPTURE_RECORD_UPDATED', pageId, record }).catch(() => undefined);
+      void browser.runtime.sendMessage({ type: 'CAPTURE_RECORD_UPDATED', pageId, interfaceId: record.interfaceId }).catch(() => undefined);
       return Promise.resolve({ ok: true });
     }
 
     if (message.type === 'CAPTURE_PAGE_READY') {
-      // 页面刷新后，旧记录已经不属于当前分析上下文，按 Tab 清理。
-      const pageId = String(sender.tab?.id ?? message.pageId ?? 'unknown');
-      captureStore.clear(pageId);
+      captureStore.clear(String(sender.tab?.id ?? message.pageId ?? 'unknown'));
       return Promise.resolve({ ok: true });
     }
 
-    if (message.type === 'CAPTURE_LIST' && message.pageId) {
-      return Promise.resolve({ ok: true, records: captureStore.list(message.pageId) });
+    if (message.type === 'CAPTURE_LIST' && message.pageId && message.interfaceId) {
+      return Promise.resolve({ ok: true, records: captureStore.list(message.pageId, message.interfaceId) });
     }
 
-    if (message.type === 'CAPTURE_CLEAR' && message.pageId) {
-      captureStore.clear(message.pageId);
+    if (message.type === 'CAPTURE_CLEAR' && message.pageId && message.interfaceId) {
+      captureStore.clear(message.pageId, message.interfaceId);
       return Promise.resolve({ ok: true });
     }
 
-    if (message.type === 'AUTO_CAPTURE_SET') {
-      if (message.enabled && message.tabId !== undefined) return startAutoCapture(message.tabId);
-      return stopAutoCapture().then(() => ({ ok: true }));
+    if (message.type === 'CAPTURE_SCHEDULE_SET' && message.interfaceId) {
+      if (message.enabled && message.tabId !== undefined && message.intervalMinutes !== undefined) {
+        return startSchedule(message.tabId, message.interfaceId, message.intervalMinutes);
+      }
+      return stopSchedule(message.interfaceId).then(() => ({ ok: true }));
     }
 
-    if (message.type === 'AUTO_CAPTURE_GET_STATUS') {
-      return Promise.all([readAutoCaptureConfig(), browser.alarms.get(AUTO_CAPTURE_ALARM)]).then(([config, alarm]) => ({
+    if (message.type === 'CAPTURE_SCHEDULE_GET_STATUS' && message.interfaceId) {
+      // Promise 回调不会保留消息对象的类型收窄，提前保存接口 ID。
+      const interfaceId = message.interfaceId;
+      return Promise.all([readScheduleConfig(), browser.alarms.get(getAlarmName(interfaceId))]).then(([config, alarm]) => ({
         ok: true,
-        enabled: config.enabled,
-        tabId: config.tabId,
+        ...(config[interfaceId] ?? { enabled: false } as InterfaceSchedule),
         nextRunAt: alarm?.scheduledTime,
       }));
     }
