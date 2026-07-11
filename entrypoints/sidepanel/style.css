@@ -35,3 +35,21 @@ button { padding: 5px 9px; border: 1px solid #cbd5e1; border-radius: 4px; backgr
 .change-down { color: #10b981; }
 .change-empty { color: #64748b; }
 .error { color: #dc2626; }
+.item-rank-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 12px 0 8px; }
+.item-rank-modes { display: flex; gap: 4px; }
+.item-rank-modes button { padding: 5px 12px; color: #475569; background: #f1f5f9; border-color: transparent; }
+.item-rank-modes button.item-rank-mode-active { color: #2563eb; border-color: #2563eb; background: #fff; }
+.item-rank-sort { color: #64748b; font-size: 11px; white-space: nowrap; }
+.item-rank-table-wrap { overflow: auto; margin-top: 12px; border: 1px solid #e2e8f0; }
+.item-rank-table { min-width: 2200px; width: 100%; border-collapse: collapse; font-size: 12px; }
+.item-rank-table th, .item-rank-table td { min-width: 104px; padding: 8px 10px; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; text-align: right; white-space: nowrap; vertical-align: middle; }
+.item-rank-table thead th { background: #f8fafc; color: #475569; font-weight: 400; text-align: center; }
+.item-rank-table thead th.item-rank-product-column, .item-rank-table tbody th.item-rank-product-cell { position: sticky; left: 0; z-index: 1; min-width: 250px; width: 250px; background: #fff; text-align: left; }
+.item-rank-table thead th.item-rank-product-column { z-index: 2; background: #f8fafc; }
+.item-rank-table td > span { display: block; line-height: 18px; }
+.item-rank-product { display: flex; align-items: center; gap: 8px; min-width: 230px; }
+.item-rank-product img, .item-rank-image-empty { flex: 0 0 42px; width: 42px; height: 42px; border-radius: 4px; object-fit: cover; }
+.item-rank-image-empty { display: inline-flex; align-items: center; justify-content: center; background: #e2e8f0; color: #64748b; font-size: 11px; }
+.item-rank-product-text { display: flex; min-width: 0; flex-direction: column; }
+.item-rank-title { overflow: hidden; color: #2563eb; text-overflow: ellipsis; }
+.item-rank-product-text small { margin-top: 3px; color: #94a3b8; font-size: 11px; font-weight: 400; }
