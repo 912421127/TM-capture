@@ -68,8 +68,7 @@ async function readRecordsForTab(tabId: string): Promise<void> {
 }
 
 const itemRankTable = computed(() => {
-  const latestRecord = [...itemRankRecords.value].reverse()[0];
-  return latestRecord ? buildItemRankTable(latestRecord.responseBody, itemRankMode.value) : buildItemRankTable('', itemRankMode.value);
+  return buildItemRankTable(itemRankRecords.value.map((record) => record.responseBody), itemRankMode.value);
 });
 
 async function clearRecords(): Promise<void> {
@@ -95,13 +94,23 @@ async function loadItemRank(mode: ItemRankMode): Promise<void> {
   try {
     await browser.runtime.sendMessage({ type: 'CAPTURE_CLEAR', pageId: tabId, interfaceId: itemRankFeature.id });
     await browser.tabs.sendMessage(Number(tabId), { type: 'CAPTURE_TRIGGER', interfaceId: itemRankFeature.id, mode });
-    await new Promise((resolve) => window.setTimeout(resolve, 1500));
-    await readRecordsForTab(tabId);
+    await waitForItemRankRecords(tabId, mode);
   } catch {
     itemRankError.value = '商品排行获取失败，请确认页面仍处于生意参谋后重试';
   } finally {
     itemRankLoading.value = false;
   }
+}
+
+async function waitForItemRankRecords(tabId: string, mode: ItemRankMode): Promise<void> {
+  // 分页请求是串行发起的，轮询直到已收到 recordCount 对应的全部商品，避免只显示前几页。
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    await readRecordsForTab(tabId);
+    const table = buildItemRankTable(itemRankRecords.value.map((record) => record.responseBody), mode);
+    if (itemRankRecords.value.length > 0 && (table.recordCount === 0 || table.rows.length >= table.recordCount)) return;
+    await new Promise((resolve) => window.setTimeout(resolve, 100));
+  }
+  await readRecordsForTab(tabId);
 }
 
 function refreshItemRank(): void {

@@ -3,7 +3,7 @@
     <header class="interface-header">
       <div>
         <h2>商品排行</h2>
-        <p>{{ table.recordCount ? `共 ${table.recordCount} 件商品，当前显示 ${table.rows.length} 件` : '还没有商品排行数据' }}</p>
+        <p>{{ table.recordCount ? `共 ${table.recordCount} 件商品，当前显示 ${pageInfo.start}-${pageInfo.end} 条` : '还没有商品排行数据' }}</p>
       </div>
       <div class="actions">
         <button type="button" @click="$emit('refresh')">刷新</button>
@@ -38,7 +38,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in table.rows" :key="row.itemId">
+          <tr v-for="row in pageInfo.rows" :key="row.itemId">
             <th class="item-rank-product-cell">
               <div class="item-rank-product">
                 <img v-if="row.imageUrl" :src="row.imageUrl" alt="" />
@@ -57,15 +57,27 @@
         </tbody>
       </table>
     </div>
-    <p v-else class="empty">暂无数据，点击“刷新”获取当前模式的商品排行。</p>
+    <nav v-if="pageInfo.totalPages > 1" class="item-rank-pagination" aria-label="商品排行分页">
+      <button type="button" :disabled="pageInfo.page === 1" @click="goToPage(pageInfo.page - 1)">上一页</button>
+      <button
+        v-for="page in pageNumbers"
+        :key="page"
+        type="button"
+        :class="{ 'item-rank-page-active': pageInfo.page === page }"
+        @click="goToPage(page)"
+      >{{ page }}</button>
+      <button type="button" :disabled="pageInfo.page === pageInfo.totalPages" @click="goToPage(pageInfo.page + 1)">下一页</button>
+    </nav>
+    <p v-if="!error && !loading && table.rows.length === 0" class="empty">暂无数据，点击“刷新”获取当前模式的商品排行。</p>
   </section>
 </template>
 
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue';
 import type { ItemRankMode } from './index';
-import type { ItemRankMetricFormat, ItemRankTable } from './table';
+import { paginateItemRankRows, type ItemRankMetricFormat, type ItemRankTable } from './table';
 
-defineProps<{
+const props = defineProps<{
   table: ItemRankTable;
   mode: ItemRankMode;
   loading: boolean;
@@ -84,6 +96,17 @@ const modes: Array<{ value: ItemRankMode; label: string }> = [
   { value: 'recent7', label: '7天' },
   { value: 'recent30', label: '30天' },
 ];
+const currentPage = ref(1);
+const pageInfo = computed(() => paginateItemRankRows(props.table.rows, currentPage.value, 10));
+const pageNumbers = computed(() => Array.from({ length: pageInfo.value.totalPages }, (_, index) => index + 1));
+
+watch(() => [props.table.rows, props.mode], () => {
+  currentPage.value = 1;
+});
+
+function goToPage(page: number): void {
+  currentPage.value = Math.min(Math.max(page, 1), pageInfo.value.totalPages);
+}
 
 function formatValue(format: ItemRankMetricFormat, value: number | string | null): string {
   if (value === null || value === '') return '-';

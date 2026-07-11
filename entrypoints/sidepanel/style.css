@@ -53,3 +53,6 @@ button { padding: 5px 9px; border: 1px solid #cbd5e1; border-radius: 4px; backgr
 .item-rank-product-text { display: flex; min-width: 0; flex-direction: column; }
 .item-rank-title { overflow: hidden; color: #2563eb; text-overflow: ellipsis; }
 .item-rank-product-text small { margin-top: 3px; color: #94a3b8; font-size: 11px; font-weight: 400; }
+.item-rank-pagination { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 8px; }
+.item-rank-pagination button { min-width: 28px; padding: 4px 7px; color: #475569; font-size: 12px; }
+.item-rank-pagination button.item-rank-page-active { color: #2563eb; border-color: #2563eb; }

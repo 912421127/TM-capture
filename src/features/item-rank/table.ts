@@ -51,6 +51,11 @@ export interface ItemRankTable {
   recordCount: number;
 }
 
+export interface ItemRankPageInfo {
+  recordCount: number;
+  rowCount: number;
+}
+
 function emptyTable(): ItemRankTable {
   return { metrics: ITEM_RANK_METRICS, rows: [], recordCount: 0 };
 }
@@ -96,18 +101,61 @@ function readRow(row: Record<string, unknown>): ItemRankRow {
   };
 }
 
-export function buildItemRankTable(responseBody: string, mode: ItemRankMode): ItemRankTable {
+function getResponseContainer(responseBody: string, mode: ItemRankMode): Record<string, unknown> | undefined {
   try {
     const body = JSON.parse(responseBody) as { data?: Record<string, unknown> };
     const outerData = body.data;
-    const container = mode === 'realtime'
-      ? outerData?.data as Record<string, unknown> | undefined
-      : outerData;
-    const rawRows = Array.isArray(container?.data) ? container.data : [];
-    const rows = rawRows.filter((row): row is Record<string, unknown> => Boolean(row && typeof row === 'object')).map(readRow);
-    const recordCount = typeof container?.recordCount === 'number' ? container.recordCount : rows.length;
-    return { metrics: ITEM_RANK_METRICS, rows, recordCount };
+    return mode === 'realtime' ? outerData?.data as Record<string, unknown> | undefined : outerData;
   } catch {
-    return emptyTable();
+    return undefined;
   }
+}
+
+export function getItemRankPageInfo(responseBody: string, mode: ItemRankMode): ItemRankPageInfo {
+  const container = getResponseContainer(responseBody, mode);
+  const rawRows = Array.isArray(container?.data) ? container.data : [];
+  return {
+    recordCount: typeof container?.recordCount === 'number' ? container.recordCount : rawRows.length,
+    rowCount: rawRows.length,
+  };
+}
+
+export function paginateItemRankRows<T>(rows: T[], page: number, pageSize: number): {
+  rows: T[];
+  page: number;
+  totalPages: number;
+  start: number;
+  end: number;
+} {
+  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const safePage = Math.min(Math.max(page, 1), totalPages);
+  const startIndex = (safePage - 1) * pageSize;
+  const pageRows = rows.slice(startIndex, startIndex + pageSize);
+  return {
+    rows: pageRows,
+    page: safePage,
+    totalPages,
+    start: pageRows.length === 0 ? 0 : startIndex + 1,
+    end: pageRows.length === 0 ? 0 : startIndex + pageRows.length,
+  };
+}
+
+export function buildItemRankTable(responseBodies: string | string[], mode: ItemRankMode): ItemRankTable {
+  const bodies = Array.isArray(responseBodies) ? responseBodies : [responseBodies];
+  const rowById = new Map<string, ItemRankRow>();
+  let recordCount = 0;
+
+  bodies.forEach((responseBody) => {
+    const container = getResponseContainer(responseBody, mode);
+    const rawRows = Array.isArray(container?.data) ? container.data : [];
+    const currentCount = typeof container?.recordCount === 'number' ? container.recordCount : rawRows.length;
+    recordCount = Math.max(recordCount, currentCount);
+    rawRows.filter((row): row is Record<string, unknown> => Boolean(row && typeof row === 'object')).map(readRow).forEach((row, index) => {
+      // 分页响应中商品 ID 应唯一；缺失 ID 时保留每一行，避免数据被误合并。
+      const key = row.itemId || `row-${rowById.size}-${index}`;
+      if (!rowById.has(key)) rowById.set(key, row);
+    });
+  });
+
+  return { metrics: ITEM_RANK_METRICS, rows: [...rowById.values()], recordCount: Math.max(recordCount, rowById.size) };
 }

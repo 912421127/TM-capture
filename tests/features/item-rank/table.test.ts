@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildItemRankTable } from '../../../src/features/item-rank/table';
+import { buildItemRankTable, paginateItemRankRows } from '../../../src/features/item-rank/table';
 
 const metricKeys = [
   'payAmt', 'sucRefundAmt', 'payItmCnt', 'payByrCnt', 'payRate',
@@ -67,5 +67,26 @@ describe('商品排行响应解析', () => {
       .toEqual({ value: null, change: null });
     expect(buildItemRankTable(JSON.stringify({ data: { recordCount: 0, data: [] } }), 'recent30').rows).toEqual([]);
     expect(buildItemRankTable('{invalid json', 'recent30')).toEqual({ metrics: expect.any(Array), rows: [], recordCount: 0 });
+  });
+
+  it('在本地分页并返回最后不足一页的商品', () => {
+    const rows = Array.from({ length: 25 }, (_, index) => ({ itemId: String(index + 1) }));
+
+    expect(paginateItemRankRows(rows, 1, 10)).toEqual({ rows: rows.slice(0, 10), page: 1, totalPages: 3, start: 1, end: 10 });
+    expect(paginateItemRankRows(rows, 3, 10)).toEqual({ rows: rows.slice(20), page: 3, totalPages: 3, start: 21, end: 25 });
+  });
+
+  it('合并多页响应并按商品 ID 去重', () => {
+    const first = makeRow();
+    const second = { ...makeRow(), item: { ...makeRow().item, itemId: 'second-item' } };
+    const duplicate = { ...makeRow(), payAmt: { value: 999 } };
+    const table = buildItemRankTable([
+      JSON.stringify({ data: { recordCount: 2, data: [first] } }),
+      JSON.stringify({ data: { recordCount: 2, data: [second, duplicate] } }),
+    ], 'recent7');
+
+    expect(table.recordCount).toBe(2);
+    expect(table.rows.map((row) => row.itemId)).toEqual(['1037139102717', 'second-item']);
+    expect(table.rows[0]?.cells.payAmt.value).toBe(769);
   });
 });
