@@ -9,9 +9,27 @@ import {
   type InterfaceSchedule,
   type ScheduleConfig,
 } from '../src/shared/schedule';
+import { createAuxiliaryCaptureSessionManager } from '../src/features/auxiliary-capture/session';
 
 const captureStore = createPageCaptureStore();
 const SCHEDULE_STORAGE_KEY = 'interfaceSchedules';
+const AUXILIARY_CAPTURE_INTERFACE_ID = 'auxiliary-capture';
+const AUXILIARY_CAPTURE_SESSION_STORAGE_KEY = 'auxiliaryCaptureTabIds';
+const auxiliaryCaptureSessions = createAuxiliaryCaptureSessionManager({
+  async readSessions() {
+    const result = await browser.storage.session.get(AUXILIARY_CAPTURE_SESSION_STORAGE_KEY);
+    return (result[AUXILIARY_CAPTURE_SESSION_STORAGE_KEY] as number[] | undefined) ?? [];
+  },
+  async saveSessions(tabIds) {
+    await browser.storage.session.set({ [AUXILIARY_CAPTURE_SESSION_STORAGE_KEY]: tabIds });
+  },
+  async sendSession(tabId, enabled) {
+    await browser.tabs.sendMessage(tabId, { type: 'CAPTURE_AUXILIARY_SESSION_SET', enabled });
+  },
+  clearRecords(tabId) {
+    captureStore.clear(String(tabId), AUXILIARY_CAPTURE_INTERFACE_ID);
+  },
+});
 
 async function readScheduleConfig(): Promise<ScheduleConfig> {
   const result = await browser.storage.local.get(SCHEDULE_STORAGE_KEY);
@@ -88,6 +106,7 @@ export default defineBackground(() => {
   });
 
   browser.tabs.onRemoved.addListener((tabId) => {
+    void auxiliaryCaptureSessions.removeTab(tabId).catch(() => undefined);
     void readScheduleConfig().then((config) => {
       Object.entries(config).forEach(([interfaceId, schedule]) => {
         if (schedule.tabId === tabId) void stopSchedule(interfaceId);
@@ -113,8 +132,14 @@ export default defineBackground(() => {
     }
 
     if (message.type === 'CAPTURE_PAGE_READY') {
-      captureStore.clear(String(sender.tab?.id ?? message.pageId ?? 'unknown'));
-      return Promise.resolve({ ok: true });
+      const tabId = sender.tab?.id;
+      captureStore.clear(String(tabId ?? message.pageId ?? 'unknown'));
+      // 页面刷新后先清空旧记录；会话从 session storage 恢复后再让新脚本继续监听。
+      return tabId === undefined
+        ? Promise.resolve({ ok: true })
+        : auxiliaryCaptureSessions.restoreForPage(tabId)
+          .then(() => ({ ok: true }))
+          .catch(() => ({ ok: false, error: '无法恢复辅助抓包，请刷新页面后重试' }));
     }
 
     if (message.type === 'CAPTURE_LIST' && message.pageId && message.interfaceId) {
@@ -131,6 +156,14 @@ export default defineBackground(() => {
         return startSchedule(message.tabId, message.interfaceId, message.intervalMinutes);
       }
       return stopSchedule(message.interfaceId).then(() => ({ ok: true }));
+    }
+
+    if (message.type === 'CAPTURE_AUXILIARY_SESSION_SET' && message.tabId !== undefined) {
+      return auxiliaryCaptureSessions.setEnabled(message.tabId, Boolean(message.enabled));
+    }
+
+    if (message.type === 'CAPTURE_AUXILIARY_SESSION_GET_STATUS' && message.tabId !== undefined) {
+      return auxiliaryCaptureSessions.getStatus(message.tabId).then((enabled) => ({ ok: true, enabled }));
     }
 
     if (message.type === 'CAPTURE_SCHEDULE_GET_STATUS' && message.interfaceId) {

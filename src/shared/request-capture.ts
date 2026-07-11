@@ -58,6 +58,13 @@ export function serializeCaptureRecords(records: RequestRecord[]): string {
   return JSON.stringify({ exportedAt: new Date().toISOString(), records }, null, 2);
 }
 
+export function createCaptureExportFilename(name: string, date = new Date()): string {
+  // 导出文件使用中国时区，避免用户看到的文件时间与生意参谋页面时间不一致。
+  const chinaTime = new Date(date.getTime() + 8 * 60 * 60 * 1000);
+  const timestamp = chinaTime.toISOString().slice(0, 19).replace('T', '_').replaceAll(':', '-');
+  return `${name}_${timestamp}.json`;
+}
+
 export function createRequestRecord(input: RequestRecordInput): RequestRecord {
   return {
     id: crypto.randomUUID(),

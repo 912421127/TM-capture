@@ -6,6 +6,7 @@ import {
   serializeCaptureRecords,
   matchesCaptureRule,
   matchesAnyCaptureRule,
+  createCaptureExportFilename,
   type CaptureRule,
 } from '../../src/shared/request-capture';
 import { captureFeatures, findCaptureFeature } from '../../src/features';
@@ -99,6 +100,23 @@ describe('request capture helpers', () => {
 
     expect(exported.records).toEqual([record]);
     expect(typeof exported.exportedAt).toBe('string');
+  });
+
+  it('creates a Chinese timestamped export filename for auxiliary capture', () => {
+    expect(createCaptureExportFilename('商品排行接口抓包', new Date('2026-07-11T03:04:05.678Z')))
+      .toBe('商品排行接口抓包_2026-07-11_11-04-05.json');
+  });
+
+  it('keeps auxiliary capture records separate from configured interfaces', () => {
+    const store = createPageCaptureStore();
+    const auxiliary = createRequestRecord({ interfaceId: 'auxiliary-capture', pageId: 'tab-1', transport: 'fetch', method: 'POST', url: 'https://sycm.taobao.com/api/rank', status: 200, contentType: 'application/json', requestHeaders: { authorization: 'keep-this' }, requestBody: '{"page":1}', responseBody: '{"ok":true}' });
+    const coreIndex = createRequestRecord({ interfaceId: 'core-index', pageId: 'tab-1', transport: 'fetch', method: 'GET', url: 'https://sycm.taobao.com/api/core', status: 200, contentType: 'application/json', responseBody: '{}' });
+
+    store.add(auxiliary);
+    store.add(coreIndex);
+
+    expect(store.list('tab-1', 'auxiliary-capture')).toEqual([auxiliary]);
+    expect(auxiliary.requestHeaders.authorization).toBe('keep-this');
   });
 
   it('builds a metric-by-date table from the core index response', () => {

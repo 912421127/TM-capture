@@ -3,23 +3,28 @@
     <header class="header"><div><h1>接口分析</h1><p>{{ pageLabel }}</p></div></header>
     <p v-if="error" class="error">{{ error }}</p>
     <CoreIndexPanel :records="records" :enabled="scheduleEnabled" :interval-minutes="intervalMinutes" :intervals="AUTO_CAPTURE_INTERVALS" :next-run-at="nextRunAt" @refresh="loadRecords" @export="exportRecords" @clear="clearRecords" @update:enabled="setScheduleEnabled" @update:interval="setIntervalMinutes" />
+    <AuxiliaryCapturePanel :records="auxiliaryRecords" :enabled="auxiliaryCaptureEnabled" @toggle="toggleAuxiliaryCapture" @export="exportAuxiliaryRecords" @clear="clearAuxiliaryRecords" />
   </main>
 </template>
 
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue';
 import CoreIndexPanel from '../../src/features/core-index/CoreIndexPanel.vue';
+import AuxiliaryCapturePanel from '../../src/features/auxiliary-capture/AuxiliaryCapturePanel.vue';
 import { coreIndexFeature } from '../../src/features/core-index';
-import { serializeCaptureRecords, type RequestRecord } from '../../src/shared/request-capture';
+import { createCaptureExportFilename, serializeCaptureRecords, type RequestRecord } from '../../src/shared/request-capture';
 import { AUTO_CAPTURE_INTERVALS } from '../../src/shared/schedule';
 
 const records = ref<RequestRecord[]>([]);
+const auxiliaryRecords = ref<RequestRecord[]>([]);
 const pageLabel = ref('正在读取当前页面');
 const error = ref('');
 const scheduleEnabled = ref(false);
 const intervalMinutes = ref(60);
 const nextRunAt = ref<number>();
+const auxiliaryCaptureEnabled = ref(false);
 let activeTabId = '';
+const AUXILIARY_CAPTURE_INTERFACE_ID = 'auxiliary-capture';
 
 async function getActiveTab(): Promise<void> {
   const tab = (await browser.tabs.query({ active: true, currentWindow: true }))[0];
@@ -37,20 +42,26 @@ async function loadRecords(): Promise<void> {
   await browser.tabs.sendMessage(Number(activeTabId), { type: 'CAPTURE_TRIGGER', interfaceId: coreIndexFeature.id });
   // 页面脚本异步复制响应内容，等待后读取可保留原有刷新体验。
   await new Promise((resolve) => window.setTimeout(resolve, 1500));
-  await readRecords();
+  await refreshActiveTabData();
 }
 
-async function readRecords(): Promise<void> {
-  await getActiveTab();
-  if (!activeTabId) return;
-  const response = await browser.runtime.sendMessage({ type: 'CAPTURE_LIST', pageId: activeTabId, interfaceId: coreIndexFeature.id }) as { records?: RequestRecord[] };
+async function readRecordsForTab(tabId: string): Promise<void> {
+  const [response, auxiliaryResponse] = await Promise.all([
+    browser.runtime.sendMessage({ type: 'CAPTURE_LIST', pageId: tabId, interfaceId: coreIndexFeature.id }) as Promise<{ records?: RequestRecord[] }>,
+    browser.runtime.sendMessage({ type: 'CAPTURE_LIST', pageId: tabId, interfaceId: AUXILIARY_CAPTURE_INTERFACE_ID }) as Promise<{ records?: RequestRecord[] }>,
+  ]);
+  // 查询期间可能切换了标签页，不能把旧页记录显示到新页上。
+  if (activeTabId !== tabId) return;
   records.value = response.records ?? [];
+  auxiliaryRecords.value = auxiliaryResponse.records ?? [];
 }
 
 async function clearRecords(): Promise<void> {
-  if (!activeTabId) return;
-  await browser.runtime.sendMessage({ type: 'CAPTURE_CLEAR', pageId: activeTabId, interfaceId: coreIndexFeature.id });
-  records.value = [];
+  await getActiveTab();
+  const tabId = activeTabId;
+  if (!tabId) return;
+  await browser.runtime.sendMessage({ type: 'CAPTURE_CLEAR', pageId: tabId, interfaceId: coreIndexFeature.id });
+  if (activeTabId === tabId) records.value = [];
 }
 
 async function loadScheduleStatus(): Promise<void> {
@@ -87,24 +98,98 @@ async function saveSchedule(): Promise<void> {
   if (scheduleEnabled.value) await loadRecords();
 }
 
-function exportRecords(): void {
+async function exportRecords(): Promise<void> {
+  await refreshActiveTabData();
   if (records.value.length === 0) return;
-  const blob = new Blob([serializeCaptureRecords(records.value)], { type: 'application/json;charset=utf-8' });
+  downloadCaptureRecords(records.value, coreIndexFeature.name);
+}
+
+async function toggleAuxiliaryCapture(): Promise<void> {
+  error.value = '';
+  await getActiveTab();
+  if (!activeTabId || !pageLabel.value.includes('生意参谋')) {
+    error.value = '请先打开生意参谋页面后再开始抓包';
+    return;
+  }
+  const tabId = activeTabId;
+  await loadAuxiliaryCaptureStatus(tabId);
+  const response = await browser.runtime.sendMessage({
+    type: 'CAPTURE_AUXILIARY_SESSION_SET',
+    tabId: Number(tabId),
+    enabled: !auxiliaryCaptureEnabled.value,
+  }) as { ok: boolean; enabled?: boolean; error?: string };
+  // 停止消息即使送达失败，后台也会关闭会话；UI 需以返回状态为准。
+  auxiliaryCaptureEnabled.value = Boolean(response.enabled);
+  if (!response.ok) {
+    error.value = response.error ?? '辅助抓包启动失败，请重新打开生意参谋页面';
+    return;
+  }
+  if (auxiliaryCaptureEnabled.value) auxiliaryRecords.value = [];
+}
+
+async function clearAuxiliaryRecords(): Promise<void> {
+  await getActiveTab();
+  const tabId = activeTabId;
+  if (!tabId) return;
+  await browser.runtime.sendMessage({ type: 'CAPTURE_CLEAR', pageId: tabId, interfaceId: AUXILIARY_CAPTURE_INTERFACE_ID });
+  if (activeTabId === tabId) auxiliaryRecords.value = [];
+}
+
+async function exportAuxiliaryRecords(): Promise<void> {
+  await refreshActiveTabData();
+  if (auxiliaryRecords.value.length === 0) return;
+  downloadCaptureRecords(auxiliaryRecords.value, '商品排行接口抓包');
+}
+
+function downloadCaptureRecords(records: RequestRecord[], featureName: string): void {
+  // 两种抓包导出使用相同下载流程，统一处理序列化、临时 URL 和释放时机。
+  const blob = new Blob([serializeCaptureRecords(records)], { type: 'application/json;charset=utf-8' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
-  link.download = `${coreIndexFeature.name}_${Date.now()}.json`;
+  link.download = createCaptureExportFilename(featureName);
   link.click();
   URL.revokeObjectURL(link.href);
 }
 
+async function loadAuxiliaryCaptureStatus(tabId: string): Promise<void> {
+  if (!tabId) {
+    auxiliaryCaptureEnabled.value = false;
+    return;
+  }
+  const response = await browser.runtime.sendMessage({ type: 'CAPTURE_AUXILIARY_SESSION_GET_STATUS', tabId: Number(tabId) }) as { enabled?: boolean };
+  if (activeTabId === tabId) auxiliaryCaptureEnabled.value = Boolean(response.enabled);
+}
+
+async function refreshActiveTabData(): Promise<void> {
+  await getActiveTab();
+  const tabId = activeTabId;
+  if (!tabId) {
+    records.value = [];
+    auxiliaryRecords.value = [];
+    auxiliaryCaptureEnabled.value = false;
+    return;
+  }
+  await Promise.all([readRecordsForTab(tabId), loadAuxiliaryCaptureStatus(tabId)]);
+}
+
 function handleRuntimeMessage(message: { type?: string; pageId?: string; interfaceId?: string }): void {
-  if (message.type === 'CAPTURE_RECORD_UPDATED' && message.pageId === activeTabId && message.interfaceId === coreIndexFeature.id) void readRecords();
+  if (message.type === 'CAPTURE_RECORD_UPDATED' && message.pageId === activeTabId && (message.interfaceId === coreIndexFeature.id || message.interfaceId === AUXILIARY_CAPTURE_INTERFACE_ID)) void readRecordsForTab(activeTabId);
+}
+
+function handleTabActivated(): void {
+  // 侧边栏常驻时必须同步到新活动标签页，避免按钮操作上一页的会话和记录。
+  void refreshActiveTabData();
 }
 
 onMounted(async () => {
   browser.runtime.onMessage.addListener(handleRuntimeMessage);
-  await readRecords();
+  browser.tabs.onActivated.addListener(handleTabActivated);
+  await refreshActiveTabData();
   await loadScheduleStatus();
+  await loadAuxiliaryCaptureStatus(activeTabId);
 });
-onUnmounted(() => browser.runtime.onMessage.removeListener(handleRuntimeMessage));
+onUnmounted(() => {
+  browser.runtime.onMessage.removeListener(handleRuntimeMessage);
+  browser.tabs.onActivated.removeListener(handleTabActivated);
+});
 </script>
