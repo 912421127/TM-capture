@@ -1,3 +1,4 @@
+// 抽象三个排行模块共用的分页循环，并向侧边栏报告当前页进度。
 export interface LoadedPage<Row> {
   rows: Row[];
   hasNext: boolean;

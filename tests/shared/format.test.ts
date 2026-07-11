@@ -1,3 +1,4 @@
+// 验证数字、金额、百分比、布尔值和空值的中文展示格式。
 import { describe, expect, it } from 'vitest';
 import { formatCellValue } from '../../src/shared/format';
 

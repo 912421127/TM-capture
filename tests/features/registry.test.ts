@@ -1,3 +1,4 @@
+// 验证采集模块注册表能够按 FeatureId 返回对应适配器。
 import { describe, expect, it } from 'vitest';
 import { createFeatureRegistry } from '../../src/features/registry';
 import type { CaptureFeature } from '../../src/shared/capture';

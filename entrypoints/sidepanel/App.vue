@@ -1,5 +1,6 @@
 <template>
   <main class="app-shell">
+    <!-- 顶部只展示连接状态和全局操作，具体筛选与结果由 FeaturePanel 负责。 -->
     <header class="app-header">
       <div>
         <h1>生意参谋采集助手</h1>
@@ -34,6 +35,7 @@
     </a-tabs>
 
     <section v-if="diagnosticMode" class="diagnostic-panel">
+      <!-- 诊断面板仅在 diagnostic 构建中渲染，生产包不会暴露接口样本能力。 -->
       <div class="diagnostic-header">
         <div>
           <h2>接口诊断</h2>
@@ -61,6 +63,7 @@
 </template>
 
 <script setup lang="ts">
+// 侧边栏根组件负责恢复本地状态、协调后台消息，并把具体展示下沉到 FeaturePanel。
 import { onMounted, onUnmounted, ref } from 'vue';
 import FeaturePanel from './FeaturePanel.vue';
 import { createDefaultFilters, featureDefinitions } from '../../src/features/definitions';
@@ -132,6 +135,7 @@ async function startCapture(featureId: FeatureId): Promise<void> {
   error.value = '';
 
   try {
+    // requestId 用于把后台进度绑定到当前任务，避免旧任务的消息污染当前面板。
     const request: CaptureRequest = { type: 'CAPTURE_START', requestId, featureId, filters } as CaptureRequest;
     const response = (await browser.runtime.sendMessage(request)) as CaptureSuccess | CaptureFailure | undefined;
     if (!response) throw new Error('后台没有返回采集结果，请重新加载插件后重试。');
@@ -167,6 +171,7 @@ async function exportResult(featureId: FeatureId, extension: 'xlsx' | 'csv'): Pr
   );
 
   if (extension === 'csv') {
+    // CSV 直接同步生成；Excel 需要浏览器端库异步打包为 Blob。
     downloadBlob(rowsToCsv(definition.columns, capture.rows), 'text/csv;charset=utf-8', fileName);
     return;
   }
@@ -195,6 +200,7 @@ function exportDiagnostics(): void {
 }
 
 function handleRuntimeMessage(message: { type?: string; record?: DiagnosticRecord } & Partial<CaptureProgress>): void {
+  // 后台进度和诊断记录共用 runtime 通道，按消息类型分别更新局部状态。
   if (message.type === 'CAPTURE_PROGRESS' && message.requestId === activeRequestId.value) {
     progress.value = message.message ?? '';
   }
@@ -204,6 +210,7 @@ function handleRuntimeMessage(message: { type?: string; record?: DiagnosticRecor
 }
 
 onMounted(async () => {
+  // 先恢复结果和筛选条件，再加载类目与连接状态，首次打开侧边栏即可继续上次操作。
   await initializeStorage();
   for (const featureId of featureIds) {
     capturesByFeature.value[featureId] = await loadLatestCapture(featureId);

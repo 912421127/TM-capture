@@ -1,4 +1,5 @@
 // @vitest-environment node
+// 验证 Excel Blob 可解压，并包含正确的工作表名、表头和数据。
 import { describe, expect, it } from 'vitest';
 import { strFromU8, unzipSync } from 'fflate';
 import { createExcelBlob } from '../../src/shared/export';

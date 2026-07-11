@@ -1,3 +1,4 @@
+// 定义脱敏前后的接口诊断记录，并在数据离开页面内存前清除敏感值。
 export interface DiagnosticRecord {
   id: string;
   capturedAt: string;
@@ -47,7 +48,7 @@ export function redactDiagnosticRecord(record: DiagnosticRecord): DiagnosticReco
     Object.entries(record.requestHeaders).map(([key, value]) => [key, SENSITIVE_KEY.test(key) ? REDACTED : value]),
   );
 
-  // 字段名会被保留，便于分析接口结构；敏感值在离开页面前就被替换。
+  // 保留字段名便于分析接口结构，但在记录离开页面前替换 token、Cookie 等敏感值。
   return {
     ...record,
     url: url.href,

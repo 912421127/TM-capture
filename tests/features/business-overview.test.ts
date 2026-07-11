@@ -1,3 +1,4 @@
+// 验证经营概览适配器的双接口请求、汇总字段和日期明细转换。
 import { describe, expect, it } from 'vitest';
 import { businessOverviewFeature } from '../../src/features/business-overview';
 import type { SycmRequest } from '../../src/shared/capture';

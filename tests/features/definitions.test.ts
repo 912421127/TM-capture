@@ -1,3 +1,4 @@
+// 验证三个模块的展示定义和默认日期筛选条件。
 import { describe, expect, it } from 'vitest';
 import { createDefaultFilters, featureDefinitions } from '../../src/features/definitions';
 

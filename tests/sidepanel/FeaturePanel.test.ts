@@ -1,3 +1,4 @@
+// 验证通用功能面板的空状态、采集事件和未连接提示。
 import { shallowMount } from '@vue/test-utils';
 import { describe, expect, it } from 'vitest';
 import FeaturePanel from '../../entrypoints/sidepanel/FeaturePanel.vue';

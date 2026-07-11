@@ -1,3 +1,4 @@
+// 市场商品排行适配器：加载可选叶子类目，并按类目读取市场排行分页。
 import { featureDefinitions } from './definitions';
 import type { CaptureFeature, FeatureCollectResult, MarketProductRankRow, SycmTransport } from '../shared/capture';
 import { getRangeDateType } from '../shared/date-range';
@@ -9,6 +10,7 @@ const columns = featureDefinitions.find((feature) => feature.id === 'market-prod
 const rankTypeMap = { payAmount: 'gmv', visitorCount: 'uv', buyerCount: 'payByrCnt' } as const;
 
 function toAbsoluteUrl(value: unknown): string {
+  // 商品详情地址可能是协议相对地址，HTML 实体也需要在导出前还原。
   if (typeof value !== 'string') return '';
   return value.startsWith('//') ? `https:${value.replaceAll('&amp;', '&')}` : value.replaceAll('&amp;', '&');
 }
@@ -19,6 +21,7 @@ export interface MarketCategory {
 }
 
 export async function loadMarketCategories(transport: SycmTransport): Promise<MarketCategory[]> {
+  // 市场类目接口返回数组下标数据，只保留标记为可选叶子类目的记录。
   const data = unwrapSycmResponse(await transport.request({ url: 'https://sycm.taobao.com/mc/common/free/getCateInfo.json?marketVersion=free' }));
   if (!Array.isArray(data)) return [];
   return data
@@ -32,6 +35,7 @@ export const marketProductRankFeature: CaptureFeature<'market-product-rank'> = {
   label: '市场商品排行',
   columns,
   async collect(filters, transport, onProgress): Promise<FeatureCollectResult<'market-product-rank'>> {
+    // 分页器统一处理总页数和进度，本适配器专注于市场接口参数与字段映射。
     const rows = await collectPages<MarketProductRankRow>({
       onProgress,
       loadPage: async (page) => {
@@ -66,7 +70,6 @@ export const marketProductRankFeature: CaptureFeature<'market-product-rank'> = {
               itemId: String(readMetric(source, 'itemId') ?? item.itemId ?? ''),
               title: String(item.title ?? ''),
               itemUrl: toAbsoluteUrl(item.detailUrl),
-              imageUrl: toAbsoluteUrl(item.pictUrl),
               sellerId: String(item.userId ?? ''),
               isTmall: Boolean(shop.b2CShop),
               visitorCount: readMetric(source, 'uv'),

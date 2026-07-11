@@ -1,3 +1,4 @@
+// 负责一次采集任务的生命周期：校验筛选条件、转发进度、保存完整结果并释放互斥锁。
 import type {
   CaptureFeature,
   CaptureProgress,
@@ -30,6 +31,7 @@ export function createCaptureCoordinator({ save, now = () => new Date() }: Coord
 
       activeRequestId = request.requestId;
       try {
+        // 只有所有页面都成功后才构造并保存结果，避免旧结果被半成品覆盖。
         const collected = await feature.collect(request.filters, transport, (progress) => {
           onProgress({ requestId: request.requestId, ...progress });
         });
@@ -42,7 +44,6 @@ export function createCaptureCoordinator({ save, now = () => new Date() }: Coord
           rows: collected.rows,
         };
 
-        // 只有所有分页都成功后才保存，旧的成功结果不会被半成品覆盖。
         await save(capture as LatestCapture<FeatureId>);
         return capture;
       } finally {

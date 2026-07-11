@@ -1,3 +1,4 @@
+// 验证本地存储初始化、采集结果和筛选条件的读写清理。
 import { beforeEach, describe, expect, it } from 'vitest';
 import { browser } from 'wxt/browser';
 import {

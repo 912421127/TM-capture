@@ -1,3 +1,4 @@
+// 验证诊断内存缓冲区的数量上限、拷贝返回和清空行为。
 import { describe, expect, it } from 'vitest';
 import { createDiagnosticBuffer } from '../../src/shared/diagnostic-buffer';
 import type { DiagnosticRecord } from '../../src/shared/diagnostic';

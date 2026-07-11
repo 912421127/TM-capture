@@ -1,3 +1,4 @@
+// 验证本店商品排行的指标映射、商品字段转换和分页总数读取。
 import { describe, expect, it } from 'vitest';
 import { storeProductRankFeature } from '../../src/features/store-product-rank';
 import type { SycmRequest } from '../../src/shared/capture';

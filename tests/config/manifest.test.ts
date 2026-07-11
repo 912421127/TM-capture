@@ -1,3 +1,4 @@
+// 验证扩展清单包含生意参谋访问权限和侧边栏所需配置。
 import { describe, expect, it } from 'vitest';
 import config from '../../wxt.config';
 

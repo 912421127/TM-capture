@@ -1,4 +1,5 @@
 {
+  // 继承 WXT 生成的浏览器类型，并对项目源码启用严格检查。
   "extends": "./.wxt/tsconfig.json",
   "compilerOptions": {
     "strict": true,

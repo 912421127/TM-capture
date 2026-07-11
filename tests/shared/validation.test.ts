@@ -1,3 +1,4 @@
+// 验证日期格式、日期顺序和市场类目筛选条件的用户提示。
 import { describe, expect, it } from 'vitest';
 import { validateFilters } from '../../src/shared/validation';
 

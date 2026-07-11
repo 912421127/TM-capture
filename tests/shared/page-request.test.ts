@@ -1,3 +1,4 @@
+// 验证页面请求的来源限制、鉴权参数、HTTP 错误、JSON 检查和超时。
 import { describe, expect, it, vi } from 'vitest';
 import { executeSycmRequest } from '../../src/shared/page-request';
 

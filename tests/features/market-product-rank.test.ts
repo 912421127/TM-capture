@@ -1,3 +1,4 @@
+// 验证市场排行的区间指标、商品字段映射和可选叶子类目过滤。
 import { describe, expect, it } from 'vitest';
 import { loadMarketCategories, marketProductRankFeature } from '../../src/features/market-product-rank';
 import type { SycmRequest } from '../../src/shared/capture';

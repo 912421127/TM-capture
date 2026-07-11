@@ -1,3 +1,4 @@
+// 验证页面鉴权信息的记忆、请求补全和缺少 token 时的失败提示。
 import { describe, expect, it } from 'vitest';
 import { prepareAuthenticatedRequest, rememberPageAuth } from '../../src/shared/page-auth';
 

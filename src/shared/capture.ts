@@ -1,3 +1,4 @@
+// 统一定义采集模块、筛选条件、接口请求和导出结果的数据契约，避免入口与适配器各自维护一套类型。
 export type FeatureId = 'business-overview' | 'store-product-rank' | 'market-product-rank';
 
 export type RankMetric = 'payAmount' | 'visitorCount' | 'buyerCount';
@@ -41,7 +42,6 @@ export interface StoreProductRankRow extends TableRow {
   itemId: string;
   title: string;
   itemUrl: string;
-  imageUrl: string;
   visitorCount: number;
   buyerCount: number;
   payAmount: number;
@@ -53,7 +53,6 @@ export interface MarketProductRankRow extends TableRow {
   itemId: string;
   title: string;
   itemUrl: string;
-  imageUrl: string;
   sellerId: string;
   isTmall: boolean;
   visitorCount: CellValue;
@@ -138,5 +137,3 @@ export interface CaptureFailure {
   requestId: string;
   error: string;
 }
-
-export type CaptureMessage = CaptureRequest | ({ type: 'CAPTURE_PROGRESS' } & CaptureProgress) | CaptureSuccess | CaptureFailure;

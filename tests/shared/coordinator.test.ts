@@ -1,3 +1,4 @@
+// 验证采集协调器的筛选校验、任务互斥、完整保存和进度透传。
 import { describe, expect, it, vi } from 'vitest';
 import { createCaptureCoordinator } from '../../src/shared/coordinator';
 import type {

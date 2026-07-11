@@ -1,3 +1,4 @@
+// 封装侧边栏、后台和内容脚本之间的诊断开关消息，并把通信失败转换成用户提示。
 export interface DiagnosticToggleResult {
   ok: boolean;
   error?: string;
@@ -15,6 +16,7 @@ export async function enableDiagnosticInTab(
   sendMessage: (tabId: number, message: { type: 'DIAGNOSTIC_SET_ENABLED'; enabled: boolean }) => Promise<unknown>,
 ): Promise<DiagnosticToggleResult> {
   try {
+    // 诊断脚本可能尚未注入当前页面，所以发送失败时提示刷新页面，而不是暴露底层异常。
     await sendMessage(tabId, { type: 'DIAGNOSTIC_SET_ENABLED', enabled });
     return { ok: true };
   } catch {

@@ -1,3 +1,4 @@
+// 验证标签页选择优先活动生意参谋页，并正确处理无匹配情况。
 import { describe, expect, it } from 'vitest';
 import { findSycmTabId } from '../../src/shared/tabs';
 

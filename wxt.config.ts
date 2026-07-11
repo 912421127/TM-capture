@@ -1,3 +1,4 @@
+// WXT 构建配置：声明 Vue 模块、MV3 权限以及页面主世界脚本的可访问资源。
 import { defineConfig } from 'wxt';
 
 export default defineConfig({

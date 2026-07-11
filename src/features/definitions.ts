@@ -1,3 +1,4 @@
+// 描述三个采集模块的展示列，并根据模块生成侧边栏默认筛选条件。
 import type { FeatureId, FiltersFor, TableColumn } from '../shared/capture';
 
 export interface FeatureDefinition {
@@ -58,6 +59,7 @@ function formatLocalDate(date: Date): string {
 }
 
 export function createDefaultFilters<F extends FeatureId>(featureId: F, now = new Date()): FiltersFor<F> {
+  // 默认查询昨天及之前 7 天，避开当天数据尚未结算导致的空值或波动。
   const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
   const range = { startDate: formatLocalDate(start), endDate: formatLocalDate(end) };

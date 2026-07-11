@@ -1,3 +1,4 @@
+// 验证分页聚合、进度通知、提前结束和异常页数保护。
 import { describe, expect, it, vi } from 'vitest';
 import { collectPages } from '../../src/shared/pagination';
 

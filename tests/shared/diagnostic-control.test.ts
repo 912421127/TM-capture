@@ -1,3 +1,4 @@
+// 验证诊断开关消息在成功、返回格式错误和页面未注入时的提示。
 import { describe, expect, it } from 'vitest';
 import { enableDiagnosticInTab, requestDiagnosticToggle } from '../../src/shared/diagnostic-control';
 

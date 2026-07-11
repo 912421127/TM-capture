@@ -1,3 +1,4 @@
+// 页面主世界脚本：观察页面请求获取临时鉴权信息，并执行扩展发起的同源接口请求。
 import { redactDiagnosticRecord, type DiagnosticRecord } from '../src/shared/diagnostic';
 import { rememberPageAuth, type PageAuth } from '../src/shared/page-auth';
 import { executeSycmRequest } from '../src/shared/page-request';
@@ -25,6 +26,7 @@ interface XhrDiagnosticState {
 export default defineUnlistedScript(() => {
   const marker = '__TM_CAPTURE_MAIN_WORLD_INSTALLED__';
   const globalWindow = window as typeof window & Record<string, unknown>;
+  // 内容脚本刷新或重复注入时只保留一套拦截器，避免同一个请求被重复记录。
   if (globalWindow[marker]) return;
   globalWindow[marker] = true;
 
@@ -36,6 +38,7 @@ export default defineUnlistedScript(() => {
   }
 
   const authFetch = window.fetch.bind(window);
+  // 页面原有 fetch/XHR 只用于观察鉴权信息，实际请求仍调用原始实现。
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const request = input instanceof Request ? input : null;
     const url = request?.url ?? String(input);
@@ -88,6 +91,7 @@ export default defineUnlistedScript(() => {
   });
 
   function safeBody(text: string): string {
+    // 诊断样本只保留有限大小，避免克隆大响应阻塞页面或撑爆后台内存。
     return text.length <= MAX_DIAGNOSTIC_BODY_SIZE ? text : '__RESPONSE_TOO_LARGE__';
   }
 
@@ -101,6 +105,7 @@ export default defineUnlistedScript(() => {
     window.dispatchEvent(new CustomEvent(DIAGNOSTIC_EVENT, { detail: sanitized }));
   }
 
+  // 诊断构建在鉴权拦截器之后再包一层 fetch，只采集同源请求并异步读取响应副本。
   const originalFetch = window.fetch.bind(window);
   window.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const response = await originalFetch(input, init);

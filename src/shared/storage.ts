@@ -1,3 +1,4 @@
+// 统一管理最新采集结果和筛选条件的浏览器本地存储键，避免 UI 直接拼接键名。
 import { browser } from 'wxt/browser';
 import type { FeatureId, FiltersFor, LatestCapture } from './capture';
 

@@ -1,3 +1,4 @@
+// 验证后台采集处理器的标签页检查、模块查找、进度广播和错误返回。
 import { describe, expect, it, vi } from 'vitest';
 import { createCaptureHandler } from '../../src/shared/capture-handler';
 import type { CaptureFeature, CaptureRequest, LatestCapture, SycmTransport } from '../../src/shared/capture';

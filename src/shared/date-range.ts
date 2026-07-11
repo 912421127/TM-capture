@@ -1,3 +1,4 @@
+// 将日期范围转换为生意参谋接口认可的快捷范围名称。
 function toUtcDay(value: string): number {
   return Date.parse(`${value}T00:00:00Z`);
 }

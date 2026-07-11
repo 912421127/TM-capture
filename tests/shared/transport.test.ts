@@ -1,3 +1,4 @@
+// 验证标签页消息传输会包装请求，并把桥接错误转换为异常。
 import { describe, expect, it, vi } from 'vitest';
 import { createTabTransport } from '../../src/shared/transport';
 

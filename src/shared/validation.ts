@@ -1,3 +1,4 @@
+// 在请求发出前校验日期和市场类目，避免无效参数触发不必要的页面请求。
 import type { FeatureId, FiltersFor, MarketProductRankFilters } from './capture';
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;

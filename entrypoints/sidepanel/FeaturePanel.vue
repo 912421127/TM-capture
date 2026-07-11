@@ -1,5 +1,6 @@
 <template>
   <section class="feature-panel">
+    <!-- FeaturePanel 只处理当前模块的筛选、操作按钮和结果展示，采集调度由父组件完成。 -->
     <a-alert
       v-if="!connected"
       type="warning"
@@ -99,6 +100,7 @@
 </template>
 
 <script setup lang="ts">
+// 单个采集模块的通用面板，通过 definition 和 filters 支持三类数据功能复用同一套 UI。
 import { computed } from 'vue';
 import type { FeatureDefinition } from '../../src/features/definitions';
 import type {
@@ -149,6 +151,7 @@ const marketFilters = computed<MarketProductRankFilters | null>(() => {
 });
 
 const tableColumns = computed(() =>
+  // Ant Design 表格使用 dataIndex，领域定义保留 key/label 以便导出复用。
   props.definition.columns.map((column) => ({ ...column, title: column.label, dataIndex: column.key })),
 );
 
@@ -159,6 +162,7 @@ function updateFilter(key: string, value: unknown): void {
 }
 
 function updateCategory(categoryId: string): void {
+  // 保存类目 ID 同时保存中文名称，导出摘要不需要再次查找接口数据。
   const category = props.categories.find((item) => item.value === categoryId);
   emit('update:filters', {
     ...props.filters,

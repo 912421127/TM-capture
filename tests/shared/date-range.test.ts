@@ -1,3 +1,4 @@
+// 验证日期范围会映射到单日、近 7 天、近 30 天或自定义类型。
 import { describe, expect, it } from 'vitest';
 import { getRangeDateType } from '../../src/shared/date-range';
 

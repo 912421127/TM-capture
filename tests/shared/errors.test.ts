@@ -1,3 +1,4 @@
+// 验证未知异常会转换为稳定的中文用户提示。
 import { describe, expect, it } from 'vitest';
 import { toUserErrorMessage } from '../../src/shared/errors';
 

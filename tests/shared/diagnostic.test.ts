@@ -1,3 +1,4 @@
+// 验证诊断 URL、请求头、请求体和响应体的敏感信息脱敏。
 import { describe, expect, it } from 'vitest';
 import { redactDiagnosticRecord } from '../../src/shared/diagnostic';
 

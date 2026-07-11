@@ -1,3 +1,4 @@
+// 后台入口负责浏览器生命周期、采集任务调度、标签页桥接和诊断记录转发。
 import { createDiagnosticBuffer } from '../src/shared/diagnostic-buffer';
 import { enableDiagnosticInTab } from '../src/shared/diagnostic-control';
 import type { DiagnosticRecord } from '../src/shared/diagnostic';
@@ -16,6 +17,7 @@ interface ExtensionMessage {
 }
 
 export default defineBackground(() => {
+  // 诊断记录只保存在后台内存，关闭后台后自动清空，避免敏感样本长期落盘。
   const diagnosticBuffer = createDiagnosticBuffer();
 
   void initializeStorage();
@@ -30,6 +32,7 @@ export default defineBackground(() => {
     registry: featureRegistry,
     getTabId: getSycmTabId,
     createTransport: (tabId) =>
+      // 所有采集请求都通过当前生意参谋标签页的内容脚本进入页面环境。
       createTabTransport(tabId, async (targetTabId, requestMessage) => {
         return (await browser.tabs.sendMessage(targetTabId, requestMessage)) as PageRequestResponse;
       }),
@@ -40,6 +43,7 @@ export default defineBackground(() => {
   });
 
   browser.runtime.onMessage.addListener((message: ExtensionMessage) => {
+    // 消息分支保持扁平，便于区分生产采集流程和仅诊断构建才存在的功能。
     if (message.type === 'CAPTURE_START') {
       return handleCapture(message as CaptureRequest);
     }

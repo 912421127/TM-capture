@@ -1,3 +1,4 @@
+// 提供 CSV、Excel 和浏览器下载能力，所有格式都复用同一份列定义与行数据。
 import writeXlsxFile, { type SheetData } from 'write-excel-file/browser';
 import type { TableColumn, TableRow } from './capture';
 
@@ -8,6 +9,7 @@ function escapeCsvCell(value: unknown): string {
 }
 
 export function rowsToCsv(columns: TableColumn[], rows: TableRow[]): string {
+  // 加 BOM 让 Excel 按中文编码打开 CSV，字段内容再按 RFC 风格转义逗号和换行。
   const header = columns.map((column) => escapeCsvCell(column.label)).join(',');
   const lines = rows.map((row) => columns.map((column) => escapeCsvCell(row[column.key])).join(','));
   return `\ufeff${[header, ...lines].join('\r\n')}`;
@@ -30,6 +32,7 @@ export function buildExportFileName(
 }
 
 export async function createExcelBlob(sheetName: string, columns: TableColumn[], rows: TableRow[]): Promise<Blob> {
+  // Excel 工作表名最多 31 个字符，截断只影响显示名称，不影响导出内容。
   const sheetData: SheetData = [
     columns.map((column) => ({ value: column.label, fontWeight: 'bold' })),
     ...rows.map((row) => columns.map((column) => row[column.key] ?? '')),
@@ -38,6 +41,7 @@ export async function createExcelBlob(sheetName: string, columns: TableColumn[],
 }
 
 export function downloadBlob(data: BlobPart, type: string, fileName: string): void {
+  // 通过临时对象 URL 触发浏览器下载，完成后立即释放 URL 避免内存泄漏。
   const url = URL.createObjectURL(new Blob([data], { type }));
   const link = document.createElement('a');
   link.href = url;

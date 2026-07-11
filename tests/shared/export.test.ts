@@ -1,3 +1,4 @@
+// 验证 CSV 转义、中文 BOM、导出文件名和浏览器下载触发。
 import { describe, expect, it, vi } from 'vitest';
 import { buildExportFileName, downloadBlob, rowsToCsv } from '../../src/shared/export';
 import type { TableColumn } from '../../src/shared/capture';

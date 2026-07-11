@@ -1,3 +1,4 @@
+// 把后台消息转换为一次完整采集任务，并统一处理连接、模块不存在和用户可读错误。
 import { featureDefinitions } from '../features/definitions';
 import type {
   CaptureFailure,
@@ -22,6 +23,7 @@ interface CaptureHandlerOptions {
 }
 
 export function createCaptureHandler(options: CaptureHandlerOptions) {
+  // coordinator 负责互斥、校验和保存；这里只负责浏览器标签页与消息传递。
   const coordinator = createCaptureCoordinator({ save: options.save, now: options.now });
 
   return async (request: CaptureRequest): Promise<CaptureSuccess | CaptureFailure> => {

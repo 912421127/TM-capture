@@ -1,3 +1,4 @@
+/* 侧边栏全局布局样式；组件内部的功能样式保留在 FeaturePanel.vue 的 scoped 区域。 */
 :root {
   color: #1f2937;
   background: #f4f6f8;
@@ -14,6 +15,7 @@ body {
 }
 
 .app-shell {
+  /* 给窄侧边栏保留稳定内边距，避免表格和操作按钮贴边。 */
   min-height: 100vh;
   padding: 16px;
   background: #fff;
@@ -49,6 +51,7 @@ body {
 }
 
 .diagnostic-panel {
+  /* 诊断区域与正常采集区域视觉分隔，生产构建不会渲染此块。 */
   margin-top: 24px;
   padding-top: 18px;
   border-top: 1px solid #e5e7eb;

@@ -1,3 +1,4 @@
+// 验证生意参谋响应拆包、错误识别、指标读取和对象安全转换。
 import { describe, expect, it } from 'vitest';
 import { readMetric, unwrapSycmResponse } from '../../src/shared/sycm-response';
 
