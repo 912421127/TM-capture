@@ -11,10 +11,9 @@ import type {
   SycmTransport,
 } from './capture';
 import { createCaptureCoordinator } from './coordinator';
-import { toUserErrorMessage } from './errors';
 
 interface CaptureHandlerOptions {
-  registry: { get(featureId: FeatureId): CaptureFeature<FeatureId> | undefined };
+  registry: Map<FeatureId, CaptureFeature<FeatureId>>;
   getTabId(): Promise<number | null>;
   createTransport(tabId: number): SycmTransport;
   save(capture: LatestCapture<FeatureId>): Promise<void>;
@@ -42,7 +41,8 @@ export function createCaptureHandler(options: CaptureHandlerOptions) {
       });
       return { type: 'CAPTURE_SUCCESS', requestId: request.requestId, capture };
     } catch (error) {
-      return { type: 'CAPTURE_FAILURE', requestId: request.requestId, error: toUserErrorMessage(error) };
+      const message = error instanceof Error && error.message.trim() ? error.message : '采集失败，请刷新生意参谋页面后重试。';
+      return { type: 'CAPTURE_FAILURE', requestId: request.requestId, error: message };
     }
   };
 }

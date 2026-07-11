@@ -1,8 +1,7 @@
 // 验证后台采集处理器的标签页检查、模块查找、进度广播和错误返回。
 import { describe, expect, it, vi } from 'vitest';
 import { createCaptureHandler } from '../../src/shared/capture-handler';
-import type { CaptureFeature, CaptureRequest, LatestCapture, SycmTransport } from '../../src/shared/capture';
-import { createFeatureRegistry } from '../../src/features/registry';
+import type { CaptureFeature, CaptureRequest, FeatureId, LatestCapture, SycmTransport } from '../../src/shared/capture';
 
 const request: CaptureRequest<'business-overview'> = {
   type: 'CAPTURE_START',
@@ -16,7 +15,7 @@ const transport: SycmTransport = { request: async <T>() => ({} as T) };
 describe('capture handler', () => {
   it('找不到生意参谋页面时返回中文错误', async () => {
     const handler = createCaptureHandler({
-      registry: createFeatureRegistry([]),
+      registry: new Map<FeatureId, CaptureFeature<FeatureId>>(),
       getTabId: async () => null,
       createTransport: () => transport,
       save: async () => undefined,
@@ -32,7 +31,7 @@ describe('capture handler', () => {
 
   it('未取得真实接口样本时不执行猜测请求', async () => {
     const handler = createCaptureHandler({
-      registry: createFeatureRegistry([]),
+      registry: new Map<FeatureId, CaptureFeature<FeatureId>>(),
       getTabId: async () => 5,
       createTransport: () => transport,
       save: async () => undefined,
@@ -59,7 +58,7 @@ describe('capture handler', () => {
     const save = vi.fn<(capture: LatestCapture) => Promise<void>>(async () => undefined);
     const broadcast = vi.fn(async () => undefined);
     const handler = createCaptureHandler({
-      registry: createFeatureRegistry([feature]),
+      registry: new Map<FeatureId, CaptureFeature<FeatureId>>([['business-overview', feature]]),
       getTabId: async () => 5,
       createTransport: () => transport,
       save,
@@ -76,6 +75,54 @@ describe('capture handler', () => {
       currentPage: 1,
       totalPages: 1,
       message: '已采集 1 / 1 页',
+    });
+  });
+
+  it('未知异常返回通用中文错误', async () => {
+    const feature: CaptureFeature<'business-overview'> = {
+      id: 'business-overview',
+      label: '经营概览',
+      columns: [],
+      collect: async () => {
+        throw { reason: 'unknown' };
+      },
+    };
+    const handler = createCaptureHandler({
+      registry: new Map<FeatureId, CaptureFeature<FeatureId>>([['business-overview', feature]]),
+      getTabId: async () => 5,
+      createTransport: () => transport,
+      save: async () => undefined,
+      broadcast: async () => undefined,
+    });
+
+    await expect(handler(request)).resolves.toEqual({
+      type: 'CAPTURE_FAILURE',
+      requestId: 'request-1',
+      error: '采集失败，请刷新生意参谋页面后重试。',
+    });
+  });
+
+  it('保留 Error 对象中的具体错误消息', async () => {
+    const feature: CaptureFeature<'business-overview'> = {
+      id: 'business-overview',
+      label: '经营概览',
+      columns: [],
+      collect: async () => {
+        throw new Error('接口返回失败');
+      },
+    };
+    const handler = createCaptureHandler({
+      registry: new Map<FeatureId, CaptureFeature<FeatureId>>([['business-overview', feature]]),
+      getTabId: async () => 5,
+      createTransport: () => transport,
+      save: async () => undefined,
+      broadcast: async () => undefined,
+    });
+
+    await expect(handler(request)).resolves.toEqual({
+      type: 'CAPTURE_FAILURE',
+      requestId: 'request-1',
+      error: '接口返回失败',
     });
   });
 });

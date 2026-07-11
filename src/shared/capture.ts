@@ -1,9 +1,9 @@
 // 统一定义采集模块、筛选条件、接口请求和导出结果的数据契约，避免入口与适配器各自维护一套类型。
 export type FeatureId = 'business-overview' | 'store-product-rank' | 'market-product-rank';
 
-export type RankMetric = 'payAmount' | 'visitorCount' | 'buyerCount';
+type RankMetric = 'payAmount' | 'visitorCount' | 'buyerCount';
 
-export interface DateRangeFilters {
+interface DateRangeFilters {
   startDate: string;
   endDate: string;
 }
@@ -60,14 +60,14 @@ export interface MarketProductRankRow extends TableRow {
   payAmount: CellValue;
 }
 
-export interface FeatureRowsMap {
+interface FeatureRowsMap {
   'business-overview': BusinessOverviewRow;
   'store-product-rank': StoreProductRankRow;
   'market-product-rank': MarketProductRankRow;
 }
 
 export type FiltersFor<F extends FeatureId> = FeatureFiltersMap[F];
-export type RowFor<F extends FeatureId> = FeatureRowsMap[F];
+type RowFor<F extends FeatureId> = FeatureRowsMap[F];
 
 export interface TableColumn {
   key: string;

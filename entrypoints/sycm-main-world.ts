@@ -48,7 +48,7 @@ export default defineUnlistedScript(() => {
 
   const xhrAuthStates = new WeakMap<XMLHttpRequest, { url: string; headers: Record<string, string> }>();
   const authOpen = XMLHttpRequest.prototype.open;
-  XMLHttpRequest.prototype.open = function (method: string, url: string | URL): void {
+  XMLHttpRequest.prototype.open = function (_method: string, url: string | URL): void {
     xhrAuthStates.set(this, { url: new URL(String(url), location.href).href, headers: {} });
     authOpen.apply(this, arguments as unknown as Parameters<XMLHttpRequest['open']>);
   };
