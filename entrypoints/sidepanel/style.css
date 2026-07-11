@@ -1,177 +1,32 @@
-/* 侧边栏全局布局样式，经营概览与诊断区域共用这些基础规则。 */
 :root {
   color: #1f2937;
-  background: #f4f6f8;
-  font-family: Inter, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #f8fafc;
+  font-family: "Microsoft YaHei", sans-serif;
 }
 
-* {
-  box-sizing: border-box;
-}
-
-body {
-  min-width: 360px;
-  margin: 0;
-}
-
-.app-shell {
-  /* 给窄侧边栏保留稳定内边距，避免表格和操作按钮贴边。 */
-  min-height: 100vh;
-  padding: 16px;
-  background: #fff;
-}
-
-.app-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.app-header h1,
-.diagnostic-header h2 {
-  margin: 0;
-}
-
-.app-header h1 {
-  font-size: 20px;
-}
-
-.app-header p,
-.diagnostic-header p {
-  margin: 5px 0 0;
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.connection-actions {
-  display: flex;
-  gap: 8px;
-  margin: 14px 0 4px;
-}
-
-.overview-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.notice {
-  margin-top: -8px;
-}
-
-.filter-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.filter-grid label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  color: #4b5563;
-  font-size: 13px;
-}
-
-.filter-grid input {
-  height: 32px;
-  padding: 0 8px;
-  border: 1px solid #d9d9d9;
-  border-radius: 6px;
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.result-meta {
-  display: flex;
-  justify-content: space-between;
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.summary-item {
-  padding: 10px;
-  border-radius: 6px;
-  background: #f5f7fa;
-}
-
-.summary-item span,
-.summary-item strong {
-  display: block;
-}
-
-.summary-item span {
-  margin-bottom: 4px;
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.empty-result {
-  padding: 28px 0;
-}
-
-.diagnostic-panel {
-  /* 诊断区域与正常采集区域视觉分隔，生产构建不会渲染此块。 */
-  margin-top: 24px;
-  padding-top: 18px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.diagnostic-header,
-.diagnostic-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.diagnostic-header {
-  margin-bottom: 12px;
-}
-
-.diagnostic-header h2 {
-  font-size: 16px;
-}
-
-.diagnostic-actions {
-  margin: 12px 0;
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.diagnostic-list {
-  max-height: 320px;
-  overflow: auto;
-}
-
-.diagnostic-list details {
-  padding: 8px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.diagnostic-list summary {
-  cursor: pointer;
-  font-size: 12px;
-  word-break: break-all;
-}
-
-.diagnostic-list pre {
-  overflow: auto;
-  padding: 8px;
-  border-radius: 4px;
-  background: #111827;
-  color: #e5e7eb;
-  font-size: 11px;
-  white-space: pre-wrap;
-}
+/* 基础布局：侧边栏窄屏下保持操作区和数据区清晰分开。 */
+* { box-sizing: border-box; }
+body { min-width: 360px; margin: 0; }
+.page { padding: 14px; }
+.header, .actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+h1 { margin: 0; font-size: 18px; }
+.header p, .summary, .muted { color: #64748b; font-size: 12px; }
+.header p { margin: 4px 0 0; }
+button { padding: 5px 9px; border: 1px solid #cbd5e1; border-radius: 4px; background: white; cursor: pointer; }
+.summary { margin: 14px 0 8px; }
+.auto-capture-bar { display: flex; align-items: center; gap: 12px; margin: 12px 0; padding: 8px 10px; background: #f8fafc; color: #64748b; font-size: 12px; }
+.auto-capture-bar label { color: #1f2937; }
+.empty { padding: 28px 12px; color: #64748b; text-align: center; font-size: 13px; }
+/* 表格横向滚动，首列固定，便于对照大量日期列。 */
+.overview-table-wrap { overflow: auto; margin-top: 12px; border: 1px solid #e2e8f0; }
+.overview-table { min-width: 920px; width: 100%; border-collapse: collapse; font-size: 12px; }
+.overview-table th, .overview-table td { padding: 9px 10px; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; text-align: right; white-space: nowrap; }
+.overview-table thead th { background: #f8fafc; color: #475569; font-weight: 400; text-align: center; }
+.overview-table thead th:first-child, .overview-table tbody th { position: sticky; left: 0; z-index: 1; background: #fff; text-align: left; }
+.overview-table thead th:first-child { z-index: 2; background: #f8fafc; }
+.overview-table thead span { color: #64748b; font-size: 11px; }
+.overview-table td span + span { margin-left: 8px; }
+.change-up { color: #ef4444; }
+.change-down { color: #10b981; }
+.change-empty { color: #64748b; }
+.error { color: #dc2626; }
