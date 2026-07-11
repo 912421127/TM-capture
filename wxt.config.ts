@@ -6,7 +6,7 @@ export default defineConfig({
     manifestVersion: 3,
     manifest: {
         name: '生意参谋采集助手',
-        description: '采集并导出生意参谋的经营概览和商品排行数据。',
+        description: '采集并导出生意参谋首页的经营概览数据。',
         version: '0.2.0',
         minimum_chrome_version: '114',
         permissions: ['sidePanel', 'storage', 'tabs'],

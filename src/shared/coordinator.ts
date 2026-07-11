@@ -7,7 +7,7 @@ import type {
   LatestCapture,
   SycmTransport,
 } from './capture';
-import { validateFilters } from './validation';
+import { validateDateRange } from './validation';
 
 interface CoordinatorOptions {
   save(capture: LatestCapture<FeatureId>): Promise<void>;
@@ -26,7 +26,7 @@ export function createCaptureCoordinator({ save, now = () => new Date() }: Coord
     ): Promise<LatestCapture<F>> {
       if (activeRequestId) throw new Error('已有采集任务正在运行，请等待完成后再试。');
 
-      const validationErrors = validateFilters(request.featureId, request.filters);
+      const validationErrors = validateDateRange(request.filters.startDate, request.filters.endDate);
       if (validationErrors.length > 0) throw new Error(validationErrors[0]);
 
       activeRequestId = request.requestId;

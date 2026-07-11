@@ -1,4 +1,4 @@
-/* 侧边栏全局布局样式；组件内部的功能样式保留在 FeaturePanel.vue 的 scoped 区域。 */
+/* 侧边栏全局布局样式，经营概览与诊断区域共用这些基础规则。 */
 :root {
   color: #1f2937;
   background: #f4f6f8;
@@ -48,6 +48,77 @@ body {
   display: flex;
   gap: 8px;
   margin: 14px 0 4px;
+}
+
+.overview-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.notice {
+  margin-top: -8px;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.filter-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #4b5563;
+  font-size: 13px;
+}
+
+.filter-grid input {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.result-meta {
+  display: flex;
+  justify-content: space-between;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.summary-item {
+  padding: 10px;
+  border-radius: 6px;
+  background: #f5f7fa;
+}
+
+.summary-item span,
+.summary-item strong {
+  display: block;
+}
+
+.summary-item span {
+  margin-bottom: 4px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.empty-result {
+  padding: 28px 0;
 }
 
 .diagnostic-panel {

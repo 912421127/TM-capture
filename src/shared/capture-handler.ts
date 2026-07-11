@@ -1,5 +1,4 @@
 // 把后台消息转换为一次完整采集任务，并统一处理连接、模块不存在和用户可读错误。
-import { featureDefinitions } from '../features/definitions';
 import type {
   CaptureFailure,
   CaptureFeature,
@@ -32,8 +31,7 @@ export function createCaptureHandler(options: CaptureHandlerOptions) {
 
       const feature = options.registry.get(request.featureId);
       if (!feature) {
-        const label = featureDefinitions.find((item) => item.id === request.featureId)?.label ?? '当前模块';
-        throw new Error(`${label}接口尚未完成诊断，请先使用诊断构建采集真实样本。`);
+        throw new Error('经营概览接口尚未完成诊断，请先使用诊断构建采集真实样本。');
       }
 
       const capture = await coordinator.run(request, feature, options.createTransport(tabId), (progress) => {

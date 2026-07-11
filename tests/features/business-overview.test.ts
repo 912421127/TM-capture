@@ -1,9 +1,16 @@
 // 验证经营概览适配器的双接口请求、汇总字段和日期明细转换。
 import { describe, expect, it } from 'vitest';
-import { businessOverviewFeature } from '../../src/features/business-overview';
+import { businessOverviewFeature, createDefaultBusinessOverviewFilters } from '../../src/features/business-overview';
 import type { SycmRequest } from '../../src/shared/capture';
 
 describe('businessOverviewFeature', () => {
+  it('默认使用截至昨天的最近七个完整自然日', () => {
+    expect(createDefaultBusinessOverviewFilters(new Date('2026-07-10T12:00:00+08:00'))).toEqual({
+      startDate: '2026-07-03',
+      endDate: '2026-07-09',
+    });
+  });
+
   it('使用经营概览接口生成汇总和每日明细', async () => {
     const calls: SycmRequest[] = [];
     const request = async <T>(input: SycmRequest): Promise<T> => {

@@ -11,7 +11,7 @@ describe('Excel export', () => {
       { key: 'title', label: '商品名称' },
       { key: 'amount', label: '支付金额' },
     ];
-    const blob = await createExcelBlob('本店商品排行', columns, [{ amount: 88.5, title: '测试商品' }]);
+    const blob = await createExcelBlob('经营概览', columns, [{ amount: 88.5, title: '测试数据' }]);
     const files = unzipSync(new Uint8Array(await blob.arrayBuffer()));
     const sheetXml = strFromU8(files['xl/worksheets/sheet1.xml']!);
     const sharedStringsXml = strFromU8(files['xl/sharedStrings.xml']!);
@@ -19,7 +19,7 @@ describe('Excel export', () => {
     expect(blob.type).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     expect(sharedStringsXml).toContain('商品名称');
     expect(sharedStringsXml.indexOf('商品名称')).toBeLessThan(sharedStringsXml.indexOf('支付金额'));
-    expect(sharedStringsXml).toContain('测试商品');
+    expect(sharedStringsXml).toContain('测试数据');
     expect(sheetXml).toContain('<v>88.5</v>');
   });
 });

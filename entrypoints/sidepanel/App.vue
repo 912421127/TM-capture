@@ -1,10 +1,10 @@
 <template>
   <main class="app-shell">
-    <!-- 顶部只展示连接状态和全局操作，具体筛选与结果由 FeaturePanel 负责。 -->
+    <!-- 侧边栏只服务经营概览，后续新增接口时再增加独立模块，不在这里保留旧排行分支。 -->
     <header class="app-header">
       <div>
-        <h1>生意参谋采集助手</h1>
-        <p>采集最新数据，并按模块导出 Excel 或 CSV</p>
+        <h1>经营概览采集</h1>
+        <p>获取生意参谋首页数据并导出结果</p>
       </div>
       <a-tag :color="connected ? 'success' : 'warning'">{{ connected ? '已连接' : '未连接' }}</a-tag>
     </header>
@@ -14,40 +14,74 @@
       <a-button @click="checkConnection">刷新连接状态</a-button>
     </div>
 
-    <a-tabs v-model:active-key="activeFeature" size="small">
-      <a-tab-pane v-for="definition in featureDefinitions" :key="definition.id" :tab="definition.label">
-        <FeaturePanel
-          :definition="definition"
-          :filters="filtersByFeature[definition.id]"
-          :capture="capturesByFeature[definition.id]"
-          :connected="connected"
-          :capturing="capturing"
-          :progress="activeFeature === definition.id ? progress : ''"
-          :error="activeFeature === definition.id ? error : ''"
-          :categories="categories"
-          @update:filters="filtersByFeature[definition.id] = $event"
-          @capture="startCapture(definition.id)"
-          @export-excel="exportResult(definition.id, 'xlsx')"
-          @export-csv="exportResult(definition.id, 'csv')"
-          @clear="clearResult(definition.id)"
-        />
-      </a-tab-pane>
-    </a-tabs>
+    <section class="overview-panel">
+      <a-alert
+        v-if="!connected"
+        type="warning"
+        show-icon
+        message="尚未连接生意参谋"
+        description="请先打开并登录生意参谋，再开始采集。"
+      />
+      <a-alert v-if="error" class="notice" type="error" show-icon message="采集失败" :description="error" />
+      <a-alert v-if="progress" class="notice" type="info" show-icon message="采集进度" :description="progress" />
+
+      <div class="filter-grid">
+        <label>
+          <span>开始日期</span>
+          <input v-model="filters.startDate" type="date" :disabled="capturing" />
+        </label>
+        <label>
+          <span>结束日期</span>
+          <input v-model="filters.endDate" type="date" :disabled="capturing" />
+        </label>
+      </div>
+
+      <div class="actions">
+        <a-button type="primary" :loading="capturing" :disabled="!connected" @click="startCapture">
+          {{ capturing ? '正在采集' : '开始采集' }}
+        </a-button>
+        <a-button :disabled="!capture || capturing" @click="exportResult('xlsx')">导出 Excel</a-button>
+        <a-button :disabled="!capture || capturing" @click="exportResult('csv')">导出 CSV</a-button>
+        <a-button danger :disabled="!capture || capturing" @click="clearResult">清空结果</a-button>
+      </div>
+
+      <template v-if="capture">
+        <div class="result-meta">
+          <span>采集时间：{{ formatCapturedAt(capture.capturedAt) }}</span>
+          <span>共 {{ capture.rows.length }} 行</span>
+        </div>
+        <div v-if="summaryEntries.length" class="summary-grid">
+          <div v-for="[label, value] in summaryEntries" :key="label" class="summary-item">
+            <span>{{ label }}</span>
+            <strong>{{ formatCellValue(value) }}</strong>
+          </div>
+        </div>
+        <a-table
+          size="small"
+          :columns="tableColumns"
+          :data-source="capture.rows"
+          :scroll="{ x: 'max-content' }"
+          :pagination="{ pageSize: 20, showSizeChanger: false }"
+          row-key="date"
+        >
+          <template #bodyCell="{ column, record }">
+            <span>{{ formatCellValue(record[column.key], column.format) }}</span>
+          </template>
+        </a-table>
+      </template>
+      <a-empty v-else class="empty-result" description="尚未采集经营概览" />
+    </section>
 
     <section v-if="diagnosticMode" class="diagnostic-panel">
-      <!-- 诊断面板仅在 diagnostic 构建中渲染，生产包不会暴露接口样本能力。 -->
+      <!-- 诊断能力保留给后续接口扩展使用，生产构建不会显示此区域。 -->
       <div class="diagnostic-header">
         <div>
           <h2>接口诊断</h2>
-          <p>仅诊断构建可用。开启后刷新页面，并依次操作三个目标模块。</p>
+          <p>开启后刷新生意参谋页面，再操作经营概览面板。</p>
         </div>
         <a-switch :checked="diagnosticEnabled" checked-children="开" un-checked-children="关" @change="toggleDiagnostic" />
       </div>
-      <a-alert
-        type="info"
-        show-icon
-        message="敏感值会在离开页面前脱敏，记录只保存在后台内存中。"
-      />
+      <a-alert type="info" show-icon message="敏感值会在离开页面前脱敏，记录只保存在后台内存中。" />
       <div class="diagnostic-actions">
         <span>已记录 {{ diagnosticRecords.length }} 条请求</span>
         <a-button size="small" :disabled="diagnosticRecords.length === 0" @click="exportDiagnostics">导出脱敏样本</a-button>
@@ -63,58 +97,37 @@
 </template>
 
 <script setup lang="ts">
-// 侧边栏根组件负责恢复本地状态、协调后台消息，并把具体展示下沉到 FeaturePanel。
-import { onMounted, onUnmounted, ref } from 'vue';
-import FeaturePanel from './FeaturePanel.vue';
-import { createDefaultFilters, featureDefinitions } from '../../src/features/definitions';
+// 根组件只协调经营概览采集、结果展示、导出和诊断消息，具体接口转换位于 feature 模块。
+import { computed, onMounted, onUnmounted, ref } from 'vue';
+import { businessOverviewColumns, createDefaultBusinessOverviewFilters } from '../../src/features/business-overview';
 import type {
+  BusinessOverviewFilters,
   CaptureFailure,
   CaptureProgress,
   CaptureRequest,
   CaptureSuccess,
-  FeatureFiltersMap,
-  FeatureId,
   LatestCapture,
 } from '../../src/shared/capture';
 import type { DiagnosticRecord } from '../../src/shared/diagnostic';
 import { requestDiagnosticToggle } from '../../src/shared/diagnostic-control';
 import { buildExportFileName, createExcelBlob, downloadBlob, rowsToCsv } from '../../src/shared/export';
-import {
-  clearLatestCapture,
-  initializeStorage,
-  loadFilters,
-  loadLatestCapture,
-  saveFilters,
-} from '../../src/shared/storage';
+import { formatCellValue } from '../../src/shared/format';
+import { clearLatestCapture, initializeStorage, loadFilters, loadLatestCapture, saveFilters } from '../../src/shared/storage';
 
-interface CategoryOption {
-  label: string;
-  value: string;
-}
-
-const featureIds: FeatureId[] = ['business-overview', 'store-product-rank', 'market-product-rank'];
-const activeFeature = ref<FeatureId>('business-overview');
+const featureId = 'business-overview' as const;
+const filters = ref<BusinessOverviewFilters>(createDefaultBusinessOverviewFilters());
+const capture = ref<LatestCapture<'business-overview'> | null>(null);
 const connected = ref(false);
 const capturing = ref(false);
 const activeRequestId = ref('');
 const progress = ref('');
 const error = ref('');
-const categories = ref<CategoryOption[]>([]);
 const diagnosticMode = import.meta.env.MODE === 'diagnostic';
 const diagnosticEnabled = ref(false);
 const diagnosticRecords = ref<DiagnosticRecord[]>([]);
 
-const filtersByFeature = ref<Record<FeatureId, FeatureFiltersMap[FeatureId]>>({
-  'business-overview': createDefaultFilters('business-overview'),
-  'store-product-rank': createDefaultFilters('store-product-rank'),
-  'market-product-rank': createDefaultFilters('market-product-rank'),
-});
-
-const capturesByFeature = ref<Record<FeatureId, LatestCapture | null>>({
-  'business-overview': null,
-  'store-product-rank': null,
-  'market-product-rank': null,
-});
+const tableColumns = computed(() => businessOverviewColumns.map((column) => ({ ...column, title: column.label, dataIndex: column.key })));
+const summaryEntries = computed(() => Object.entries(capture.value?.summary ?? {}));
 
 async function checkConnection(): Promise<void> {
   const response = (await browser.runtime.sendMessage({ type: 'CONNECTION_CHECK' })) as { connected?: boolean };
@@ -125,22 +138,20 @@ async function openSycm(): Promise<void> {
   await browser.runtime.sendMessage({ type: 'OPEN_SYCM' });
 }
 
-async function startCapture(featureId: FeatureId): Promise<void> {
+async function startCapture(): Promise<void> {
   const requestId = crypto.randomUUID();
-  const filters = filtersByFeature.value[featureId];
-  await saveFilters(featureId, filters);
+  await saveFilters(featureId, filters.value);
   capturing.value = true;
   activeRequestId.value = requestId;
   progress.value = '正在准备采集…';
   error.value = '';
 
   try {
-    // requestId 用于把后台进度绑定到当前任务，避免旧任务的消息污染当前面板。
-    const request: CaptureRequest = { type: 'CAPTURE_START', requestId, featureId, filters } as CaptureRequest;
-    const response = (await browser.runtime.sendMessage(request)) as CaptureSuccess | CaptureFailure | undefined;
+    const request: CaptureRequest<'business-overview'> = { type: 'CAPTURE_START', requestId, featureId, filters: filters.value };
+    const response = (await browser.runtime.sendMessage(request)) as CaptureSuccess<'business-overview'> | CaptureFailure | undefined;
     if (!response) throw new Error('后台没有返回采集结果，请重新加载插件后重试。');
     if (response.type === 'CAPTURE_FAILURE') throw new Error(response.error);
-    capturesByFeature.value[featureId] = response.capture;
+    capture.value = response.capture;
     progress.value = `采集完成，共 ${response.capture.rows.length} 行。`;
   } catch (caught) {
     error.value = caught instanceof Error ? caught.message : '采集失败，请刷新页面后重试。';
@@ -151,31 +162,32 @@ async function startCapture(featureId: FeatureId): Promise<void> {
   }
 }
 
-async function clearResult(featureId: FeatureId): Promise<void> {
+async function clearResult(): Promise<void> {
   await clearLatestCapture(featureId);
-  capturesByFeature.value[featureId] = null;
+  capture.value = null;
   progress.value = '';
   error.value = '';
 }
 
-async function exportResult(featureId: FeatureId, extension: 'xlsx' | 'csv'): Promise<void> {
-  const capture = capturesByFeature.value[featureId];
-  const definition = featureDefinitions.find((item) => item.id === featureId);
-  if (!capture || !definition) return;
+function formatCapturedAt(value: string): string {
+  return new Date(value).toLocaleString('zh-CN', { hour12: false });
+}
+
+async function exportResult(extension: 'xlsx' | 'csv'): Promise<void> {
+  if (!capture.value) return;
   const fileName = buildExportFileName(
-    definition.label,
-    capture.filters.startDate,
-    capture.filters.endDate,
+    '经营概览',
+    capture.value.filters.startDate,
+    capture.value.filters.endDate,
     new Date(),
     extension,
   );
 
   if (extension === 'csv') {
-    // CSV 直接同步生成；Excel 需要浏览器端库异步打包为 Blob。
-    downloadBlob(rowsToCsv(definition.columns, capture.rows), 'text/csv;charset=utf-8', fileName);
+    downloadBlob(rowsToCsv(businessOverviewColumns, capture.value.rows), 'text/csv;charset=utf-8', fileName);
     return;
   }
-  const excelBlob = await createExcelBlob(definition.label, definition.columns, capture.rows);
+  const excelBlob = await createExcelBlob('经营概览', businessOverviewColumns, capture.value.rows);
   downloadBlob(excelBlob, excelBlob.type, fileName);
 }
 
@@ -200,7 +212,6 @@ function exportDiagnostics(): void {
 }
 
 function handleRuntimeMessage(message: { type?: string; record?: DiagnosticRecord } & Partial<CaptureProgress>): void {
-  // 后台进度和诊断记录共用 runtime 通道，按消息类型分别更新局部状态。
   if (message.type === 'CAPTURE_PROGRESS' && message.requestId === activeRequestId.value) {
     progress.value = message.message ?? '';
   }
@@ -210,20 +221,13 @@ function handleRuntimeMessage(message: { type?: string; record?: DiagnosticRecor
 }
 
 onMounted(async () => {
-  // 先恢复结果和筛选条件，再加载类目与连接状态，首次打开侧边栏即可继续上次操作。
   await initializeStorage();
-  for (const featureId of featureIds) {
-    capturesByFeature.value[featureId] = await loadLatestCapture(featureId);
-    filtersByFeature.value[featureId] = (await loadFilters(featureId)) ?? createDefaultFilters(featureId);
-  }
+  capture.value = await loadLatestCapture(featureId);
+  filters.value = (await loadFilters(featureId)) ?? createDefaultBusinessOverviewFilters();
   if (diagnosticMode) {
     const response = (await browser.runtime.sendMessage({ type: 'DIAGNOSTIC_LIST' })) as { records?: DiagnosticRecord[] };
     diagnosticRecords.value = response.records ?? [];
   }
-  const categoryResponse = (await browser.runtime.sendMessage({ type: 'CATEGORIES_LIST' })) as {
-    categories?: CategoryOption[];
-  };
-  categories.value = categoryResponse.categories ?? [];
   browser.runtime.onMessage.addListener(handleRuntimeMessage);
   await checkConnection();
 });

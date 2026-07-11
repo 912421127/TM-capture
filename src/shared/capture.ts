@@ -1,7 +1,5 @@
 // 统一定义采集模块、筛选条件、接口请求和导出结果的数据契约，避免入口与适配器各自维护一套类型。
-export type FeatureId = 'business-overview' | 'store-product-rank' | 'market-product-rank';
-
-type RankMetric = 'payAmount' | 'visitorCount' | 'buyerCount';
+export type FeatureId = 'business-overview';
 
 interface DateRangeFilters {
   startDate: string;
@@ -10,19 +8,8 @@ interface DateRangeFilters {
 
 export type BusinessOverviewFilters = DateRangeFilters;
 
-export interface StoreProductRankFilters extends DateRangeFilters {
-  metric: RankMetric;
-}
-
-export interface MarketProductRankFilters extends StoreProductRankFilters {
-  categoryId: string;
-  categoryName: string;
-}
-
-export interface FeatureFiltersMap {
+interface FeatureFiltersMap {
   'business-overview': BusinessOverviewFilters;
-  'store-product-rank': StoreProductRankFilters;
-  'market-product-rank': MarketProductRankFilters;
 }
 
 export type CellValue = string | number | boolean | null;
@@ -37,33 +24,8 @@ export interface BusinessOverviewRow extends TableRow {
   conversionRate: number;
 }
 
-export interface StoreProductRankRow extends TableRow {
-  rank: number;
-  itemId: string;
-  title: string;
-  itemUrl: string;
-  visitorCount: number;
-  buyerCount: number;
-  payAmount: number;
-  conversionRate: number;
-}
-
-export interface MarketProductRankRow extends TableRow {
-  rank: number;
-  itemId: string;
-  title: string;
-  itemUrl: string;
-  sellerId: string;
-  isTmall: boolean;
-  visitorCount: CellValue;
-  buyerCount: CellValue;
-  payAmount: CellValue;
-}
-
 interface FeatureRowsMap {
   'business-overview': BusinessOverviewRow;
-  'store-product-rank': StoreProductRankRow;
-  'market-product-rank': MarketProductRankRow;
 }
 
 export type FiltersFor<F extends FeatureId> = FeatureFiltersMap[F];

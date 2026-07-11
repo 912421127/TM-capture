@@ -1,10 +1,30 @@
 // 经营概览适配器：调用汇总与每日明细接口，并转换成统一表格行。
-import { featureDefinitions } from './definitions';
-import type { BusinessOverviewRow, CaptureFeature, FeatureCollectResult, SycmRequest } from '../shared/capture';
+import type { BusinessOverviewFilters, BusinessOverviewRow, CaptureFeature, FeatureCollectResult, SycmRequest, TableColumn } from '../shared/capture';
 import { getRangeDateType } from '../shared/date-range';
 import { readMetric, readObject, unwrapSycmResponse } from '../shared/sycm-response';
 
-const overviewColumns = featureDefinitions.find((feature) => feature.id === 'business-overview')!.columns;
+export const businessOverviewColumns: TableColumn[] = [
+  { key: 'date', label: '日期' },
+  { key: 'visitorCount', label: '访客数', format: 'number' },
+  { key: 'pageViewCount', label: '浏览量', format: 'number' },
+  { key: 'buyerCount', label: '支付买家数', format: 'number' },
+  { key: 'payAmount', label: '支付金额', format: 'currency' },
+  { key: 'conversionRate', label: '支付转化率', format: 'percentage' },
+];
+
+function formatLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// 默认查询昨天及之前七天，避免把当天尚未结算的数据当成完整结果。
+export function createDefaultBusinessOverviewFilters(now = new Date()): BusinessOverviewFilters {
+  const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+  return { startDate: formatLocalDate(start), endDate: formatLocalDate(end) };
+}
 
 function createPortalRequest(path: string, startDate: string, endDate: string, needCycleCrc = false): SycmRequest {
   // 两个经营概览接口共享日期参数和页面来源头，只在需要时增加周期校验参数。
@@ -34,7 +54,7 @@ function createRow(source: unknown): BusinessOverviewRow {
 export const businessOverviewFeature: CaptureFeature<'business-overview'> = {
   id: 'business-overview',
   label: '经营概览',
-  columns: overviewColumns,
+  columns: businessOverviewColumns,
   async collect(filters, transport, onProgress): Promise<FeatureCollectResult<'business-overview'>> {
     // 经营概览固定分两次请求，因此进度明确展示为汇总和每日明细两个阶段。
     onProgress({ currentPage: 1, totalPages: 2, message: '正在读取经营汇总…' });

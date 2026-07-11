@@ -3,7 +3,6 @@ import { createDiagnosticBuffer } from '../src/shared/diagnostic-buffer';
 import { enableDiagnosticInTab } from '../src/shared/diagnostic-control';
 import type { DiagnosticRecord } from '../src/shared/diagnostic';
 import { featureRegistry } from '../src/features';
-import { loadMarketCategories } from '../src/features/market-product-rank';
 import type { CaptureRequest } from '../src/shared/capture';
 import { createCaptureHandler } from '../src/shared/capture-handler';
 import { initializeStorage, saveLatestCapture } from '../src/shared/storage';
@@ -53,20 +52,6 @@ export default defineBackground(() => {
 
     if (message.type === 'OPEN_SYCM') {
       return browser.tabs.create({ url: 'https://sycm.taobao.com/' }).then(() => ({ ok: true }));
-    }
-
-    if (message.type === 'CATEGORIES_LIST') {
-      return getSycmTabId().then(async (tabId) => {
-        if (tabId == null) return { categories: [], error: '请先打开并登录生意参谋。' };
-        try {
-          const transport = createTabTransport(tabId, async (targetTabId, requestMessage) => {
-            return (await browser.tabs.sendMessage(targetTabId, requestMessage)) as PageRequestResponse;
-          });
-          return { categories: await loadMarketCategories(transport) };
-        } catch (error) {
-          return { categories: [], error: error instanceof Error ? error.message : '市场类目读取失败。' };
-        }
-      });
     }
 
     if (message.type === 'DIAGNOSTIC_LIST' && import.meta.env.MODE === 'diagnostic') {

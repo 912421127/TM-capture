@@ -1,23 +1,14 @@
-// 在请求发出前校验日期和市场类目，避免无效参数触发不必要的页面请求。
-import type { FeatureId, FiltersFor, MarketProductRankFilters } from './capture';
+// 在请求发出前校验经营概览的日期范围，避免无效参数触发页面请求。
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-export function validateFilters<F extends FeatureId>(featureId: F, filters: FiltersFor<F>): string[] {
+export function validateDateRange(startDate: string, endDate: string): string[] {
   const errors: string[] = [];
 
-  if (!DATE_PATTERN.test(filters.startDate) || !DATE_PATTERN.test(filters.endDate)) {
+  if (!DATE_PATTERN.test(startDate) || !DATE_PATTERN.test(endDate)) {
     errors.push('请选择完整的开始日期和结束日期。');
-  } else if (filters.endDate < filters.startDate) {
+  } else if (endDate < startDate) {
     errors.push('结束日期不能早于开始日期。');
   }
-
-  if (featureId === 'market-product-rank') {
-    const marketFilters = filters as MarketProductRankFilters;
-    if (!marketFilters.categoryId || !marketFilters.categoryName) {
-      errors.push('请选择市场类目。');
-    }
-  }
-
   return errors;
 }
