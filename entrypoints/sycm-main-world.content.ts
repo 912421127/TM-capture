@@ -1,5 +1,6 @@
 import { findCaptureFeature, getCaptureFeature } from '../src/features';
 import { createRequestRecord, type CaptureTransport } from '../src/shared/request-capture';
+import type { CaptureRequestOptions } from '../src/features/types';
 import {
   createFetchCaptureRequest,
   appendXhrRequestHeader,
@@ -40,9 +41,9 @@ export default defineContentScript({
     let auxiliaryCaptureEnabled = false;
 
     window.addEventListener(TRIGGER_EVENT, (event) => {
-      const interfaceId = (event as CustomEvent<{ interfaceId?: string }>).detail?.interfaceId;
-      if (!interfaceId) return;
-      void getCaptureFeature(interfaceId)?.request();
+      const detail = (event as CustomEvent<{ interfaceId?: string } & CaptureRequestOptions>).detail;
+      if (!detail?.interfaceId) return;
+      void getCaptureFeature(detail.interfaceId)?.request(detail);
     });
 
     window.addEventListener(AUXILIARY_SESSION_EVENT, (event) => {

@@ -1,7 +1,8 @@
 import { coreIndexFeature } from './core-index';
+import { itemRankFeature } from './item-rank';
 import type { CaptureFeature } from './types';
 
-export const captureFeatures: CaptureFeature[] = [coreIndexFeature];
+export const captureFeatures: CaptureFeature[] = [coreIndexFeature, itemRankFeature];
 
 export function findCaptureFeature(url: string): CaptureFeature | undefined {
   return captureFeatures.find((feature) => {

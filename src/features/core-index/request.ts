@@ -1,18 +1,5 @@
-function findQueryValue(key: string): string | null {
-  const currentValue = new URL(location.href).searchParams.get(key);
-  if (currentValue) return currentValue;
-
-  const entries = performance.getEntriesByType('resource').reverse();
-  for (const entry of entries) {
-    try {
-      const value = new URL((entry as PerformanceResourceTiming).name, location.href).searchParams.get(key);
-      if (value) return value;
-    } catch {
-      continue;
-    }
-  }
-  return null;
-}
+import type { CaptureRequestOptions } from '../types';
+import { findPageQueryValue } from '../../shared/page-request';
 
 function formatToday(): string {
   const now = new Date();
@@ -20,14 +7,14 @@ function formatToday(): string {
   return `${date.toISOString().slice(0, 10)}|${date.toISOString().slice(0, 10)}`;
 }
 
-export async function requestCoreIndex(): Promise<void> {
+export async function requestCoreIndex(_options?: CaptureRequestOptions): Promise<void> {
   // 复用当前页面的登录会话，只补齐数据概览接口必需的 token 和日期。
-  const token = findQueryValue('token');
+  const token = findPageQueryValue('token');
   if (!token) return;
 
   const url = new URL('/portal/coreIndex/new/getTableData/v3.json', location.origin);
   url.searchParams.set('dateType', 'day');
-  url.searchParams.set('dateRange', findQueryValue('dateRange') ?? formatToday());
+  url.searchParams.set('dateRange', findPageQueryValue('dateRange') ?? formatToday());
   url.searchParams.set('_', String(Date.now()));
   url.searchParams.set('token', token);
 
