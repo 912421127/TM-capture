@@ -1,0 +1,38 @@
+:root {
+  color: #1f2937;
+  background: #f8fafc;
+  font-family: "Microsoft YaHei", sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { min-width: 360px; margin: 0; }
+.page { padding: 14px; }
+.header, .actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+h1 { margin: 0; font-size: 18px; }
+.header p, .summary, .muted { color: #64748b; font-size: 12px; }
+.header p { margin: 4px 0 0; }
+button { padding: 5px 9px; border: 1px solid #cbd5e1; border-radius: 4px; background: white; cursor: pointer; }
+.summary { margin: 14px 0 8px; }
+.auto-capture-bar { display: flex; align-items: center; gap: 12px; margin: 12px 0; padding: 8px 10px; background: #f8fafc; color: #64748b; font-size: 12px; }
+.auto-capture-bar label { color: #1f2937; }
+.empty { padding: 28px 12px; color: #64748b; text-align: center; font-size: 13px; }
+.overview-table-wrap { overflow: auto; margin-top: 12px; border: 1px solid #e2e8f0; }
+.overview-table { min-width: 920px; width: 100%; border-collapse: collapse; font-size: 12px; }
+.overview-table th, .overview-table td { padding: 9px 10px; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; text-align: right; white-space: nowrap; }
+.overview-table thead th { background: #f8fafc; color: #475569; font-weight: 400; text-align: center; }
+.overview-table thead th:first-child, .overview-table tbody th { position: sticky; left: 0; z-index: 1; background: #fff; text-align: left; }
+.overview-table thead th:first-child { z-index: 2; background: #f8fafc; }
+.overview-table thead span { color: #64748b; font-size: 11px; }
+.overview-table td span + span { margin-left: 8px; }
+.change-up { color: #ef4444; }
+.change-down { color: #10b981; }
+.change-empty { color: #64748b; }
+.record { padding: 9px 0; border-bottom: 1px solid #e2e8f0; }
+.record summary { display: flex; gap: 7px; cursor: pointer; align-items: center; font-size: 12px; }
+.method { color: #2563eb; font-weight: 700; }
+.status { color: #16a34a; }
+.url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.detail { padding: 8px 0 0 18px; font-size: 11px; }
+.detail p { margin: 4px 0; }
+pre { max-height: 260px; overflow: auto; padding: 8px; border-radius: 4px; background: #0f172a; color: #e2e8f0; white-space: pre-wrap; word-break: break-word; }
+.error { color: #dc2626; }

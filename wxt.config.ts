@@ -8,10 +8,20 @@ export default defineConfig({
     description: '采集并导出生意参谋的经营概览和商品排行数据。',
     version: '0.2.0',
     minimum_chrome_version: '114',
-    permissions: ['sidePanel', 'storage', 'tabs', 'scripting'],
+    permissions: ['sidePanel', 'storage', 'tabs', 'scripting', 'alarms'],
     host_permissions: ['https://sycm.taobao.com/*'],
     action: {
       default_title: '打开生意参谋采集助手',
     },
+    side_panel: {
+      default_path: 'sidepanel.html',
+    },
+    // 主世界脚本需要由目标网页加载，必须显式声明为可访问资源。
+    web_accessible_resources: [
+      {
+        resources: ['sycm-main-world.js'],
+        matches: ['https://sycm.taobao.com/*'],
+      },
+    ],
   },
 });
