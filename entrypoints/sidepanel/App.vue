@@ -49,25 +49,12 @@
       请先打开生意参谋页面并操作，匹配到的接口会显示在这里。
     </section>
 
-    <details v-for="record in records" :key="record.id" class="record">
-      <summary>
-        <span class="method">{{ record.method }}</span>
-        <span class="status">{{ record.status }}</span>
-        <span class="url">{{ shortUrl(record.url) }}</span>
-      </summary>
-      <div class="detail">
-        <p>类型：{{ record.transport }} · {{ record.contentType || '未知' }}</p>
-        <p>时间：{{ record.capturedAt }}</p>
-        <pre v-if="record.responseBody">{{ formatBody(record.responseBody) }}</pre>
-        <p v-else class="muted">未记录响应正文（二进制或空响应）</p>
-      </div>
-    </details>
   </main>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue';
-import { buildCoreIndexTable, formatCaptureUrl, serializeCaptureRecords, type RequestRecord } from '../../src/shared/request-capture';
+import { buildCoreIndexTable, serializeCaptureRecords, type RequestRecord } from '../../src/shared/request-capture';
 
 const records = ref<RequestRecord[]>([]);
 const pageLabel = ref('正在读取当前页面');
@@ -75,6 +62,14 @@ const error = ref('');
 let activeTabId = '';
 const autoCaptureEnabled = ref(false);
 const nextRunAt = ref<number | undefined>();
+
+// 这些指标在接口中以小数表示比例，展示时统一转换为百分比。
+const percentMetricKeys = new Set([
+  'payRate', 'payAmtRfdRate', 'ordRfdRate', 'oldRepeatByrRate',
+  'consultRate', 'disputeDutyRatio', 'gotInTime24hRate', 'sucRefundRate',
+]);
+
+// 同一个接口可能被手动刷新和定时任务多次调用，只显示最新一次完整响应即可。
 const table = computed(() => {
   const record = [...records.value].reverse().find((item) => item.url.includes('/portal/coreIndex/new/getTableData/v3.json'));
   return record ? buildCoreIndexTable(record.responseBody) : { columns: [], rows: [] };
@@ -108,49 +103,6 @@ async function readRecords(): Promise<void> {
   if (!activeTabId) return;
   const response = await browser.runtime.sendMessage({ type: 'CAPTURE_LIST', pageId: activeTabId }) as { records?: RequestRecord[] };
   records.value = response.records ?? [];
-}
-
-async function triggerCurrentPageLoad(): Promise<void> {
-  // 侧边栏刚打开时，Chrome 可能还没完成活动 Tab 切换，稍等一帧再获取目标。
-  await new Promise((resolve) => window.setTimeout(resolve, 300));
-  await getActiveTab();
-  if (!activeTabId || !pageLabel.value.includes('生意参谋')) return;
-  const tabId = Number(activeTabId);
-
-  // 直接在当前 Tab 执行滚动，避免内容脚本尚未注册消息监听时没有任何视觉反馈。
-  try {
-    await browser.scripting.executeScript({
-      target: { tabId },
-      func: () => {
-        const elements = [...document.querySelectorAll<HTMLElement>('h1,h2,h3,h4,div,span')]
-          .filter((element) => element.textContent?.includes('数据概览'))
-          .sort((left, right) => (left.textContent?.length ?? Infinity) - (right.textContent?.length ?? Infinity));
-        const target = elements[0];
-        if (target) {
-          target.scrollIntoView({ behavior: 'auto', block: 'center' });
-        } else {
-          window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'auto' });
-        }
-
-        // 生意参谋部分区域使用内部滚动容器，单独滚动 window 不会触发它们的懒加载。
-        const scrollableElements = [...document.querySelectorAll<HTMLElement>('*')]
-          .filter((element) => element.scrollHeight > element.clientHeight + 40);
-        for (const element of scrollableElements) {
-          element.scrollTop = element.scrollHeight;
-          element.dispatchEvent(new Event('scroll', { bubbles: true }));
-        }
-      },
-    });
-  } catch {
-    error.value = '无法操作当前页面，请确认当前 Tab 是生意参谋页面';
-  }
-
-  // 打开侧边栏时直接操作当前 Tab，不新开页面，也不刷新用户正在浏览的页面。
-  try {
-    await browser.tabs.sendMessage(tabId, { type: 'LOAD_CORE_INDEX_TABLE' });
-  } catch {
-    error.value = '当前页面脚本尚未就绪，请刷新生意参谋页面后重试';
-  }
 }
 
 async function clearRecords(): Promise<void> {
@@ -205,25 +157,9 @@ function exportRecords(): void {
   URL.revokeObjectURL(link.href);
 }
 
-function shortUrl(url: string): string {
-  return formatCaptureUrl(url);
-}
-
-function formatBody(body: string): string {
-  try {
-    return JSON.stringify(JSON.parse(body), null, 2);
-  } catch {
-    return body;
-  }
-}
-
 function formatMetric(key: string, value: number | null): string {
   if (value === null) return '-';
-  const percentKeys = new Set([
-    'payRate', 'payAmtRfdRate', 'ordRfdRate', 'oldRepeatByrRate',
-    'consultRate', 'disputeDutyRatio', 'gotInTime24hRate', 'sucRefundRate',
-  ]);
-  if (percentKeys.has(key)) return `${(value * 100).toFixed(2)}%`;
+  if (percentMetricKeys.has(key)) return `${(value * 100).toFixed(2)}%`;
   if (Number.isInteger(value)) return String(value);
   return value.toFixed(2);
 }

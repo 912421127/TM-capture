@@ -1,5 +1,6 @@
 import { createRequestRecord, matchesAnyCaptureRule, type CaptureTransport } from '../src/shared/request-capture';
 
+// 此脚本运行在网页主世界，用来观察页面自己的 fetch/XHR；内容脚本没有这个权限。
 const CAPTURE_EVENT = '__tm_capture_record';
 const DIRECT_CAPTURE_EVENT = '__tm_capture_direct_record';
 const INSTALLED_MARKER = '__TM_CAPTURE_MAIN_CONTENT_INSTALLED__';
@@ -102,6 +103,10 @@ export default defineContentScript({
     };
 
     async function requestCoreIndexTable(): Promise<void> {
+<<<<<<< HEAD
+=======
+      // 定时任务复用页面已登录会话，只补齐接口需要的 token 和当天日期范围。
+>>>>>>> c459f5d9f7c14a0dd2b8ff16977aeeaf71dc8b29
       const token = findQueryValue('token');
       if (!token) return;
       const dateRange = findQueryValue('dateRange') ?? formatToday();

@@ -1,5 +1,6 @@
 import { createPageCaptureStore, type RequestRecord } from '../src/shared/request-capture';
 
+// 后台只管理两件事：按标签页保存接口响应，以及按小时向指定标签页发起刷新。
 const captureStore = createPageCaptureStore();
 const AUTO_CAPTURE_ALARM = 'tm-capture-auto-hourly';
 const AUTO_CAPTURE_STORAGE_KEY = 'autoCaptureConfig';
@@ -48,6 +49,10 @@ async function startAutoCapture(tabId: number): Promise<{ ok: boolean; error?: s
 }
 
 async function restoreAutoCapture(): Promise<void> {
+<<<<<<< HEAD
+=======
+  // 浏览器重启后 alarms 会丢失，使用本地开关恢复用户已启用的任务。
+>>>>>>> c459f5d9f7c14a0dd2b8ff16977aeeaf71dc8b29
   const config = await readAutoCaptureConfig();
   if (!config.enabled || config.tabId === undefined) return;
   const result = await triggerTabCapture(config.tabId);

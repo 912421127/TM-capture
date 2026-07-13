@@ -4,6 +4,7 @@
   font-family: "Microsoft YaHei", sans-serif;
 }
 
+/* 基础布局：侧边栏窄屏下保持操作区和数据区清晰分开。 */
 * { box-sizing: border-box; }
 body { min-width: 360px; margin: 0; }
 .page { padding: 14px; }
@@ -16,6 +17,7 @@ button { padding: 5px 9px; border: 1px solid #cbd5e1; border-radius: 4px; backgr
 .auto-capture-bar { display: flex; align-items: center; gap: 12px; margin: 12px 0; padding: 8px 10px; background: #f8fafc; color: #64748b; font-size: 12px; }
 .auto-capture-bar label { color: #1f2937; }
 .empty { padding: 28px 12px; color: #64748b; text-align: center; font-size: 13px; }
+/* 表格横向滚动，首列固定，便于对照大量日期列。 */
 .overview-table-wrap { overflow: auto; margin-top: 12px; border: 1px solid #e2e8f0; }
 .overview-table { min-width: 920px; width: 100%; border-collapse: collapse; font-size: 12px; }
 .overview-table th, .overview-table td { padding: 9px 10px; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; text-align: right; white-space: nowrap; }
@@ -27,12 +29,4 @@ button { padding: 5px 9px; border: 1px solid #cbd5e1; border-radius: 4px; backgr
 .change-up { color: #ef4444; }
 .change-down { color: #10b981; }
 .change-empty { color: #64748b; }
-.record { padding: 9px 0; border-bottom: 1px solid #e2e8f0; }
-.record summary { display: flex; gap: 7px; cursor: pointer; align-items: center; font-size: 12px; }
-.method { color: #2563eb; font-weight: 700; }
-.status { color: #16a34a; }
-.url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.detail { padding: 8px 0 0 18px; font-size: 11px; }
-.detail p { margin: 4px 0; }
-pre { max-height: 260px; overflow: auto; padding: 8px; border-radius: 4px; background: #0f172a; color: #e2e8f0; white-space: pre-wrap; word-break: break-word; }
 .error { color: #dc2626; }

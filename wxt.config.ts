@@ -5,10 +5,10 @@ export default defineConfig({
   manifestVersion: 3,
   manifest: {
     name: '生意参谋采集助手',
-    description: '采集并导出生意参谋的经营概览和商品排行数据。',
+    description: '自动获取并汇总生意参谋数据概览接口。',
     version: '0.2.0',
     minimum_chrome_version: '114',
-    permissions: ['sidePanel', 'storage', 'tabs', 'scripting', 'alarms'],
+    permissions: ['sidePanel', 'storage', 'tabs', 'alarms'],
     host_permissions: ['https://sycm.taobao.com/*'],
     action: {
       default_title: '打开生意参谋采集助手',
